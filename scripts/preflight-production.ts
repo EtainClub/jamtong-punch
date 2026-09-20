@@ -1,8 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { brackets } from "../src/content/brackets";
-import { records } from "../src/content/records";
-import { sources } from "../src/content/sources";
-import { publishedSubjects } from "../src/content/subjects";
+import { db } from "../src/lib/firebase/admin";
 
 const envFile = process.env.ENV_FILE ?? ".env.local";
 
@@ -58,14 +55,26 @@ if (deployedValue("CRON_AUDIENCE") !== expectedAudience) {
   missing.push("CRON_AUDIENCE (must equal NEXT_PUBLIC_SITE_URL + /api/cron)");
 }
 
-if (publishedSubjects.length === 0) missing.push("published content (at least one cleared subject)");
-if (sources.length === 0) missing.push("published content sources");
-if (records.length === 0) missing.push("published content records");
-if (brackets.length === 0) missing.push("published comparison brackets");
-
-if (missing.length) {
-  console.error(`Production preflight blocked (${envFile}):\n${missing.map((item) => `- ${item}`).join("\n")}`);
-  process.exit(1);
+async function main() {
+  const [subjects, sources, records, brackets] = await Promise.all([
+    db.collection("contentSubjects").where("status", "==", "published").get(),
+    db.collection("contentSources").get(),
+    db.collection("contentRecords").where("status", "==", "published").get(),
+    db.collection("contentBrackets").where("status", "==", "published").get(),
+  ]);
+  const bootstrap = process.env.CMS_BOOTSTRAP === "1";
+  if (!bootstrap) {
+    if (subjects.empty) missing.push("published content (at least one cleared subject)");
+    if (sources.empty) missing.push("published content sources");
+    if (records.empty) missing.push("published content records");
+    if (brackets.empty) missing.push("published content brackets");
+  }
+  if (missing.length) {
+    console.error(`Production preflight blocked (${envFile}):\n${missing.map((item) => `- ${item}`).join("\n")}`);
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`Production preflight passed${bootstrap ? " (CMS bootstrap; public content is intentionally empty)" : ""}: ${subjects.size} subjects, ${records.size} records, ${brackets.size} brackets.`);
 }
 
-console.log(`Production preflight passed: ${publishedSubjects.length} subjects, ${records.length} records, ${brackets.length} brackets.`);
+void main();

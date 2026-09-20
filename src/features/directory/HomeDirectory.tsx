@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import styles from "./directory.module.css";
 
-type SubjectCard = {
+export type SubjectCard = {
   id: string;
   name: string;
   category: string;
@@ -13,19 +13,6 @@ type SubjectCard = {
   cheer: number;
   imageUrl?: string;
 };
-
-/* 실제 Firestore 콘텐츠가 아직 비어 있어 홈 UI를 검증하기 위한 시범 항목이다.
-   운영 콘텐츠 연결 시 이 배열 대신 published subjects + stats 조회 결과를 전달한다. */
-const DEMO_SUBJECTS: SubjectCard[] = [
-  { id: "demo-1", name: "인물 기록 예시", category: "정치인", kind: "person", punch: 928, cheer: 0 },
-  { id: "demo-2", name: "정책 기록 예시", category: "주거 정책", kind: "policy", punch: 1181, cheer: 37 },
-  { id: "demo-3", name: "공공 개혁 예시", category: "정책", kind: "policy", punch: 885, cheer: 203 },
-  { id: "demo-4", name: "인물 기록 예시 2", category: "법조인", kind: "person", punch: 1428, cheer: 51 },
-  { id: "demo-5", name: "지역 정책 예시", category: "지역발전", kind: "policy", punch: 665, cheer: 440 },
-  { id: "demo-6", name: "경제 정책 예시", category: "경제", kind: "policy", punch: 420, cheer: 129 },
-];
-
-const FILTERS = ["전체", "정치인", "법조인", "경제", "지역발전", "주거 정책", "정책"] as const;
 
 function ratioOf(subject: SubjectCard) {
   const total = subject.punch + subject.cheer;
@@ -36,18 +23,19 @@ function count(value: number) {
   return new Intl.NumberFormat("ko-KR").format(value);
 }
 
-export function HomeDirectory() {
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("전체");
+export function HomeDirectory({ initialSubjects }: { initialSubjects: SubjectCard[] }) {
+  const filters = ["전체", ...Array.from(new Set(initialSubjects.map((subject) => subject.category)))];
+  const [filter, setFilter] = useState("전체");
   const [query, setQuery] = useState("");
 
   const subjects = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("ko-KR");
-    return DEMO_SUBJECTS.filter((subject) => {
+    return initialSubjects.filter((subject) => {
       const filterMatch = filter === "전체" || subject.category === filter;
       const queryMatch = !normalized || `${subject.name} ${subject.category}`.toLocaleLowerCase("ko-KR").includes(normalized);
       return filterMatch && queryMatch;
     });
-  }, [filter, query]);
+  }, [filter, initialSubjects, query]);
 
   return (
     <main className={styles.page}>
@@ -67,7 +55,7 @@ export function HomeDirectory() {
         </div>
 
         <div className={styles.filters} aria-label="분류 필터">
-          {FILTERS.map((item) => (
+          {filters.map((item) => (
             <button
               className={`${styles.filter} ${filter === item ? styles.activeFilter : ""}`}
               key={item}

@@ -1,7 +1,5 @@
 import { Timestamp } from "firebase-admin/firestore";
-import { requirePublishedBracket } from "@/content/brackets";
-import { requirePublishedRecord } from "@/content/records";
-import { requirePublished } from "@/content/subjects";
+import { requirePublishedBracket, requirePublishedRecord, requirePublishedSubjects } from "@/lib/content/store";
 import { db } from "@/lib/firebase/admin";
 import type { ComparisonInput } from "@/lib/comparison/schema";
 
@@ -14,11 +12,11 @@ function expectedMatch(state: string[], round: number): ExpectedMatch[] {
   }, []);
 }
 
-function validateBracket(input: ComparisonInput) {
-  const bracket = requirePublishedBracket(input.bracket);
+async function validateBracket(input: ComparisonInput) {
+  const bracket = await requirePublishedBracket(input.bracket);
   for (const item of bracket.items) {
-    if (item.type === "record") requirePublishedRecord(item.id);
-    else requirePublished("policy", item.id);
+    if (item.type === "record") await requirePublishedRecord(item.id);
+    else await requirePublishedSubjects([{ kind: "policy", slug: item.id }]);
   }
   let contenders = bracket.items.map((item) => item.id);
   let cursor = 0;
@@ -43,7 +41,7 @@ function validateBracket(input: ComparisonInput) {
 }
 
 export async function submitComparison(uid: string, input: ComparisonInput) {
-  const bracket = validateBracket(input);
+  const bracket = await validateBracket(input);
   const marker = db.doc(`users/${uid}/sessions/${input.sessionId}`);
   return db.runTransaction(async (tx) => {
     const previous = await tx.get(marker);

@@ -1,11 +1,15 @@
 # 잼통펀치 백엔드 상세 구현 설계 (Firebase)
 
-- 상태: 운영 인프라 구성 완료, 첫 rollout 대기 중 (rev. 2)
+- 상태: 운영 인프라 및 CMS 등록 화면 배포 완료, 최초 콘텐츠 등록 대기 중 (rev. 3)
 - 상위 문서: [`implementation-design.md`](./implementation-design.md) — 이 문서는 그 문서의 8·9·10·12·13장을 구현 수준으로 푼 것이다
 - 전제: Firebase (Auth · Firestore · App Check · Storage · App Hosting) + Cloud Scheduler
 - 작성일: 2026-09-20
 
 ## 0. 개정 이력
+
+### rev. 3 — 운영 CMS
+
+콘텐츠를 코드 배열에 넣어 배포하는 방식은 운영 UI 등록 요구와 맞지 않는다. `contentSubjects`·`contentSources`·`contentRecords`·`contentBrackets`를 Firestore 신뢰 원천으로 바꾸고, `/ops/content`에서 `ops` 운영자가 등록·수정·공개·보관한다. 클라이언트 Firestore 쓰기는 여전히 전부 차단하고, 콘텐츠 변경도 App Check·ID 토큰·Custom Claim을 확인하는 Route Handler만 수행한다.
 
 ### rev. 2 — 비용 최소 구조
 
@@ -160,6 +164,10 @@ export async function verifyCron(req: Request) {
 | `users/{uid}/daily/{date}` | KST 날짜 | 개인 일일 카운터(상한 판정) |
 | `users/{uid}/state/subjects` | 고정 | 대상별 최신 입장 맵. 읽기를 3회로 고정하는 장치(6.1) |
 | `reports/{reportId}` | 자동 | 신고 |
+| `contentSubjects/{id}` | 콘텐츠 ID | 인물·정책 CMS 문서 |
+| `contentSources/{id}` | 콘텐츠 ID | 출처 CMS 문서 |
+| `contentRecords/{id}` | 콘텐츠 ID | 기록 CMS 문서 |
+| `contentBrackets/{id}` | 콘텐츠 ID | 월드컵 CMS 문서 |
 
 ```ts
 // users/{uid}/stances/{subjectId}_{date}
@@ -702,7 +710,7 @@ const body = z.object({
  9. 이상치 판정 → excluded 로 기록하되 정상 응답
 ```
 
-6번이 중요하다. 콘텐츠가 git에 있으므로(상위 6장) 대상 검증은 프로세스 메모리의 맵 조회다. Firestore를 한 번도 건드리지 않는다.
+6번은 CMS의 `published` 대상만 통과시킨다. 서버가 `contentSubjects`를 읽어 검증하며 브라우저가 임의 대상을 제출하는 경로는 없다. 콘텐츠 변경은 운영 빈도가 낮고 공개 대상 수가 작으므로, 이 읽기는 참여 원장의 무결성과 교환할 수 있는 비용이다.
 
 ```ts
 // app/api/participation/route.ts (핵심만)
@@ -1113,6 +1121,8 @@ env:
 `IP_HASH_PEPPER`는 Secret Manager로 간다. 일별 솔트와 함께 IP를 해시하는 데 쓰고, 이것이 새면 IP 역산이 쉬워진다. 웹 API 키는 비밀이 아니지만 현재 운영 구성에서는 저장소 복사를 피하기 위해 별도 App Hosting Secret으로도 주입한다. 이 키의 실제 보호선은 Firestore 규칙과 허용 도메인이다.
 
 App Hosting 생성 직후에는 `pnpm preflight:prod`를 먼저 실행한다. 이 명령은 값을 출력하지 않고 로컬 운영 환경과 `apphosting.yaml` 양쪽의 Firebase 웹 설정 여섯 개, 운영 URL·크론 audience, App Check 키·비밀, 그리고 공개 가능한 콘텐츠 묶음이 모두 있는지만 확인한다. 통과 전에는 rollout이나 Scheduler 생성을 하지 않는다.
+
+CMS 최초 배포만 예외다. 아직 콘텐츠를 등록할 화면이 없으므로 `pnpm deploy:cms-bootstrap`은 인프라 검사는 그대로 수행하되 콘텐츠 존재 조건만 한 번 건너뛴다. 이 배포본은 빈 목록만 보이며, 첫 콘텐츠 공개 뒤에는 반드시 일반 `pnpm preflight:prod`를 통과시켜야 한다.
 
 ### 배포 순서
 

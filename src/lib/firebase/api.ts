@@ -19,5 +19,6 @@ export async function firebaseJsonFetch<T>(user: Parameters<typeof getIdToken>[0
     },
   });
   if (!response.ok) throw new Error((await response.json().catch(() => ({ error: "request-failed" }))).error);
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
