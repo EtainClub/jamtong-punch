@@ -1,0 +1,50 @@
+runConfig:
+  minInstances: 0
+  maxInstances: 4
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: https://jamtong-punch--jamtong-punch.asia-east1.hosted.app
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    secret: NEXT_PUBLIC_FIREBASE_API_KEY
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: jamtong-punch.firebaseapp.com
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: jamtong-punch
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: jamtong-punch.firebasestorage.app
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "382811092993"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:382811092993:web:b9a1bde1233407f5a66800"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_APPCHECK_SITE_KEY
+    value: "6LdSI8UtAAAAANY8dQwlRT-Jd6DRBMEmD1-L3UVH"
+    availability: [BUILD, RUNTIME]
+  - variable: CRON_AUDIENCE
+    value: https://jamtong-punch--jamtong-punch.asia-east1.hosted.app/api/cron
+    availability: [RUNTIME]
+  - variable: CRON_SERVICE_ACCOUNT
+    value: jamtong-scheduler@jamtong-punch.iam.gserviceaccount.com
+    availability: [RUNTIME]
+  - variable: IP_HASH_PEPPER
+    secret: IP_HASH_PEPPER
+    availability: [RUNTIME]
+  - variable: ROLLUP_BATCH_SIZE
+    value: "80"
+    availability: [RUNTIME]
+  - variable: ROLLUP_MAX_PASSES
+    value: "10"
+    availability: [RUNTIME]
+  - variable: RECONCILE_READ_BUDGET
+    value: "50000"
+    availability: [RUNTIME]

@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "jamtong-punch",
+    "preview": "jamtong-punch-dev"
+  }
+}

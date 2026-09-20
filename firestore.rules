@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function isOps() { return signedIn() && request.auth.token.ops == true; }
+
+    match /subjectStats/{docId} { allow read: if true; allow write: if false; }
+    match /dailyStats/{docId} { allow read: if true; allow write: if false; }
+    match /subjectCohorts/{docId} { allow read, write: if false; }
+
+    match /users/{uid} {
+      allow read: if isSelf(uid);
+      allow write: if false;
+      match /stances/{docId} { allow read: if isSelf(uid); allow write: if false; }
+      match /sessions/{docId} { allow read: if isSelf(uid); allow write: if false; }
+      match /comparisons/{docId} { allow read: if isSelf(uid); allow write: if false; }
+      match /daily/{docId} { allow read: if isSelf(uid); allow write: if false; }
+      match /state/{docId} { allow read: if isSelf(uid); allow write: if false; }
+    }
+
+    match /reports/{reportId} {
+      allow read: if isOps() || (signedIn() && resource.data.reporterUid == request.auth.uid);
+      allow write: if false;
+    }
+    match /abuse/{document=**} { allow read, write: if false; }
+    match /system/{document=**} { allow read, write: if false; }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
