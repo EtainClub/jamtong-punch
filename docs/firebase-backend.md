@@ -1123,7 +1123,7 @@ App Hosting 생성 직후에는 `pnpm preflight:prod`를 먼저 실행한다. �
 2. firestore.rules · storage.rules 배포
 3. TTL 정책 설정 (`sessions`, `daily`, `ip`, `shards`, `uids`, `items`의 `expiresAt`)
 4. App Check 등록 → monitor 로 하루 관찰 → enforce 전환
-5. App Hosting `asia-east1` 백엔드에 GitHub 저장소·live branch를 연결한 뒤 `pnpm preflight:prod`를 통과시키고 앱 rollout
+5. `pnpm preflight:prod`를 통과시킨 뒤 `pnpm deploy:apphosting`으로 `asia-east1` App Hosting rollout. GitHub 저장소·live branch 연결은 자동 브랜치 배포가 필요할 때만 추가한다
 6. Cloud Scheduler 작업 3개 생성 — rollup(1분) / expire(00:05 KST) / reconcile(04:00 KST)
 7. grant-ops 로 운영자 지정
 ```
