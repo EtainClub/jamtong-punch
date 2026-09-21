@@ -1051,10 +1051,10 @@ test("증분 집계와 전체 재계산이 일치한다", async () => {
 ### 시드
 
 ```bash
-pnpm seed-dev          # 에뮬레이터에 인물 10 · 정책 5 · 익명 사용자 200 · 40일치 참여
+pnpm seed-dev          # 에뮬레이터 CMS의 공개 대상 + 익명 사용자 200명 + 40일치 참여
 ```
 
-시드 데이터는 `src/content`의 실제 대상을 쓰되 참여만 생성한다. 콘텐츠를 따로 만들면 두 벌이 생기고 하나는 낡는다.
+시드는 에뮬레이터의 `contentSubjects`에서 `published` 대상만 읽고 참여 원장만 생성한다. 운영 CMS와 별도 배열을 만들지 않아 대상 원천이 둘로 갈라지지 않는다.
 
 ## 10. 배포
 
@@ -1122,7 +1122,7 @@ env:
 
 App Hosting 생성 직후에는 `pnpm preflight:prod`를 먼저 실행한다. 이 명령은 값을 출력하지 않고 로컬 운영 환경과 `apphosting.yaml` 양쪽의 Firebase 웹 설정 여섯 개, 운영 URL·크론 audience, App Check 키·비밀, 그리고 공개 가능한 콘텐츠 묶음이 모두 있는지만 확인한다. 통과 전에는 rollout이나 Scheduler 생성을 하지 않는다.
 
-CMS 최초 배포만 예외다. 아직 콘텐츠를 등록할 화면이 없으므로 `pnpm deploy:cms-bootstrap`은 인프라 검사는 그대로 수행하되 콘텐츠 존재 조건만 한 번 건너뛴다. 이 배포본은 빈 목록만 보이며, 첫 콘텐츠 공개 뒤에는 반드시 일반 `pnpm preflight:prod`를 통과시켜야 한다.
+CMS 최초 배포만 예외다. 등록 화면을 먼저 제공하기 위해 `pnpm deploy:cms-bootstrap`은 인프라 검사는 그대로 수행하되 콘텐츠 존재 조건만 한 번 건너뛴다. 이 배포본은 빈 목록만 보이며, 첫 콘텐츠 공개 뒤에는 반드시 일반 `pnpm preflight:prod`를 통과시켜야 한다.
 
 ### 배포 순서
 

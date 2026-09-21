@@ -1,10 +1,13 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { db } from "../src/lib/firebase/admin";
-import { publishedSubjects } from "../src/content/subjects";
+import type { Subject } from "../src/content/schema";
 import { shiftDate, kstDate } from "../src/lib/date/kst";
 
 if (!process.env.FIRESTORE_EMULATOR_HOST) throw new Error("seed-dev only runs against FIRESTORE_EMULATOR_HOST");
-if (!publishedSubjects.length) throw new Error("seed-dev requires published content; no political content is generated automatically");
+
+const snapshots = await db.collection("contentSubjects").where("status", "==", "published").get();
+const publishedSubjects = snapshots.docs.map((snapshot) => snapshot.data() as Subject);
+if (!publishedSubjects.length) throw new Error("seed-dev requires published CMS subjects; no political content is generated automatically");
 
 const users = 200;
 const days = 40;
