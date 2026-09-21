@@ -37,4 +37,10 @@ let environment: RulesTestEnvironment;
     await assertFails(setDoc(doc(alice, "users/alice/stances/subject_2026-09-20"), { stance: "cheer" }));
     await assertFails(setDoc(doc(alice, "reports/report"), { reporterUid: "alice" }));
   });
+
+  test("blocks direct CMS reads and writes, including an ops custom claim", async () => {
+    const operator = environment.authenticatedContext("operator", { ops: true }).firestore();
+    await assertFails(getDoc(doc(operator, "contentSubjects/example")));
+    await assertFails(setDoc(doc(operator, "contentSubjects/example"), { id: "example", status: "published" }));
+  });
 });
