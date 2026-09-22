@@ -39,6 +39,7 @@
 .ring span { margin-top: 1px; color: var(--ash); font-size: 9px; }
 .empty { display: grid; gap: 5px; margin-top: 18px; border: 1px solid var(--stone); border-radius: var(--radius-card); background: var(--taupe); padding: 32px 20px; text-align: center; }
 .empty strong { font-size: 15px; }.empty span { color: var(--smoke); font-size: 13px; }
+.opsLink { justify-self: center; margin-top: 10px; border-radius: var(--radius-pill); background: var(--ink); padding: 10px 14px; color: white; font-size: 13px; font-weight: 800; text-decoration: none; }.opsLink:hover { background: var(--graphite); }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 @media (min-width: 620px) { .page { padding-left: 32px; padding-right: 32px; }.grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }.filters { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; } }
 @media (min-width: 960px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }.card { min-height: 210px; } }

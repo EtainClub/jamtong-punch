@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import styles from "./directory.module.css";
 
 export type SubjectCard = {
@@ -80,7 +81,7 @@ export function HomeDirectory({ initialSubjects }: { initialSubjects: SubjectCar
             {subjects.map((subject) => <SubjectTile key={subject.id} subject={subject} />)}
           </ul>
         ) : (
-          <div className={styles.empty}><strong>찾는 항목이 없습니다.</strong><span>다른 검색어 또는 분류를 선택해 보세요.</span></div>
+          <div className={styles.empty}><strong>아직 공개된 항목이 없습니다.</strong><span>운영 검토가 끝난 콘텐츠부터 이곳에 공개됩니다.</span><Link className={styles.opsLink} href="/ops/content">운영자 콘텐츠 등록</Link></div>
         )}
       </section>
     </main>
