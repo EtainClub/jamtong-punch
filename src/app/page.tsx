@@ -14,6 +14,6 @@ export default async function Home() {
     kind: subject.kind,
     punch: Number(stats[subject.id]?.d30?.punch ?? 0),
     cheer: Number(stats[subject.id]?.d30?.cheer ?? 0),
-    imageUrl: subject.image.path.startsWith("/") ? subject.image.path : `/${subject.image.path}`,
+    imageUrl: /^https?:\/\//.test(subject.image.path) ? subject.image.path : subject.image.path.startsWith("/") ? subject.image.path : `/${subject.image.path}`,
   }))} />;
 }

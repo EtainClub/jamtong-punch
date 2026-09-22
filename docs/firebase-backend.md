@@ -11,6 +11,8 @@
 
 콘텐츠를 코드 배열에 넣어 배포하는 방식은 운영 UI 등록 요구와 맞지 않는다. `contentSubjects`·`contentSources`·`contentRecords`·`contentBrackets`를 Firestore 신뢰 원천으로 바꾸고, `/ops/content`에서 `ops` 운영자가 등록·수정·공개·보관한다. 클라이언트 Firestore 쓰기는 여전히 전부 차단하고, 콘텐츠 변경도 App Check·ID 토큰·Custom Claim을 확인하는 Route Handler만 수행한다.
 
+등록 화면은 문서 ID와 slug를 자동 생성하고, 대상 종류별 분류를 선택하게 한다. 이미지는 파일 선택 또는 붙여넣기로 `/api/ops/media`에 올린다. 이 경로는 JPEG·PNG·WebP와 5 MiB 이하만 받고, 서버가 `public/content/`에 쓴 뒤 공개 URL을 돌려준다. 사진의 원 출처 URL과 권리 상태는 별도 필수 항목으로 남겨 업로드 자체가 출처 확인을 대체하지 않게 한다.
+
 ### rev. 2 — 비용 최소 구조
 
 첫 판은 집계가 **대상 수에 비례해** 돌았다. 아무도 참여하지 않아도 매분 비용이 나갔다. 그 고정 비용을 걷어내고, 참여 1건당 읽기도 절반으로 줄였다.
