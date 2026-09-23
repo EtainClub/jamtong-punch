@@ -150,3 +150,27 @@
 .figure { margin: 0; color: var(--graphite); font-size: 13px; font-variant-numeric: tabular-nums; }
 .figure b { color: var(--burgundy); }
 .reaction { display: grid; gap: 8px; margin-top: 4px; border-top: 1px dashed var(--stone); padding-top: 12px; }
+.avatar { object-position: center 22%; }
+.photoCredit { max-width: 100%; color: var(--smoke); font-size: 11px; line-height: 1.4; text-decoration: none; }
+.photoCredit:hover { text-decoration: underline; }
+.opsEdit { display: inline-flex; align-items: center; min-height: 36px; border: 1px dashed var(--graphite); border-radius: var(--radius-pill); padding: 6px 12px; color: var(--graphite); font-size: 13px; font-weight: 700; text-decoration: none; }
+.deadLink { color: var(--smoke) !important; text-decoration: line-through; }
+.gone { display: inline-block; margin-left: 6px; border-radius: var(--radius-pill); background: var(--pending-tint); padding: 1px 8px; color: var(--pending); font-size: 12px; font-weight: 750; }
+.archiveLink { margin-left: 8px; color: var(--graphite) !important; font-size: 13px; }
+.transcript { border-radius: 12px; background: var(--taupe); padding: 10px 12px; }
+.transcript summary { cursor: pointer; color: var(--graphite); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.transcript .gone { margin: 8px 0 0; }
+.transcriptText { margin: 8px 0 6px; color: var(--ink); font-size: 15px; line-height: 1.7; white-space: pre-line; }
+.transcript small { color: var(--smoke); font-size: 12px; }
+.verify { display: grid; gap: 12px; margin-top: 28px; border: 1px solid var(--stone); border-radius: var(--radius-card); background: white; padding: 18px 16px; }
+.verify h2 { margin: 0; font-size: 18px; }
+.verifyFacts { display: grid; gap: 4px; margin: 0; font-size: 13px; }
+.verifyFacts dt { color: var(--smoke); }
+.verifyFacts dd { margin: 0 0 6px; overflow-wrap: anywhere; }
+.verifyFacts code, .verifyHistory code { font-size: 12px; }
+.verifyResult { margin: 0; font-size: 15px; line-height: 1.6; }
+.verifyResult small { display: block; color: var(--smoke); font-size: 12px; }
+.verifySub { margin: 8px 0 0; font-size: 15px; }
+.verifyHistory { display: grid; gap: 4px; margin: 0; padding-left: 18px; color: var(--graphite); font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.verifyLink { color: var(--smoke) !important; font-size: 12px; text-decoration: none; }
+.verifyLink:hover { text-decoration: underline; }

@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
-import type { Evaluation, Event, Person, Relationship, Source, Statement, Topic } from "@/content/schema";
+import type { Evaluation, Event, Person, Relationship, Source, SourceAvailability, Statement, Topic } from "@/content/schema";
+import type { AnchorVersion } from "@/lib/anchor/versions";
 import { authored } from "@/lib/content/store";
 import { db } from "@/lib/firebase/admin";
 
@@ -15,6 +16,7 @@ export type PersonView = Person & { counts: PersonCounts };
 export type StatementView = Statement & { mentionedPersonIds: string[] };
 export type TopicView = Topic & { counts: { statements: number; evaluations: number; events: number; people: number } };
 export type Page<T> = { items: T[]; hasMore: boolean };
+export type SourceView = Source & { availability: SourceAvailability | null };
 
 const ZERO_PERSON_COUNTS: PersonCounts = { statements: 0, evaluationsReceived: 0, evaluationsGiven: 0, relations: 0 };
 
@@ -105,11 +107,11 @@ export const recentEvaluations = unstable_cache(async (limit: number) =>
 
 // Sources are looked up in one batch per page and returned as a plain object
 // (the cache serializes results as JSON, so a Map would not survive).
-export const getSources = unstable_cache(async (ids: string[]): Promise<Record<string, Source>> => {
+export const getSources = unstable_cache(async (ids: string[]): Promise<Record<string, SourceView>> => {
   const unique = [...new Set(ids)].sort();
   if (!unique.length) return {};
   const snapshots = await db.getAll(...unique.map((id) => db.doc(`sources/${id}`)));
-  return Object.fromEntries(snapshots.filter((snapshot) => snapshot.exists).map((snapshot) => [snapshot.id, authored("sources", snapshot.data()!)]));
+  return Object.fromEntries(snapshots.filter((snapshot) => snapshot.exists).map((snapshot) => [snapshot.id, { ...authored("sources", snapshot.data()!), availability: snapshot.get("availability") ?? null }]));
 }, ["archive", "sources"], CACHE);
 
 export function sourceIdsOf(items: Array<Statement | Evaluation | Event>): string[] {
@@ -138,3 +140,14 @@ export const getEvidence = unstable_cache(async (statementIds: string[], evaluat
     evaluations: evaluations.filter(isPublic).map(evaluation),
   };
 }, ["archive", "evidence"], CACHE);
+
+export const getAnchorVersions = unstable_cache(async (type: "statement" | "evaluation", id: string) => {
+  const snapshot = await db.doc(`anchors/${type}_${id}`).get();
+  return (snapshot.get("versions") ?? []) as AnchorVersion[];
+}, ["archive", "anchor"], CACHE);
+
+export const getPublishedRecord = unstable_cache(async (type: "statement" | "evaluation", id: string) => {
+  const snapshot = await db.doc(`${type === "statement" ? "statements" : "evaluations"}/${id}`).get();
+  if (!snapshot.exists || snapshot.get("status") !== "published") return null;
+  return type === "statement" ? { type, value: statement(snapshot) } : { type, value: evaluation(snapshot) };
+}, ["archive", "published-record"], CACHE);

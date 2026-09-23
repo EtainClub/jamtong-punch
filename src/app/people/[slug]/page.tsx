@@ -9,6 +9,7 @@ import { formatShortDate } from "@/lib/content/format";
 import { present } from "@/lib/stats/present";
 import { getPublicSubjectStats, getStatementStats } from "@/lib/stats/read";
 import { StanceButtons } from "@/features/archive/StanceButtons";
+import { OpsEditLink } from "@/features/archive/OpsEditLink";
 
 export const dynamic = "force-dynamic";
 
@@ -61,9 +62,11 @@ async function Profile({ person }: { person: PersonView }) {
   const stats = person.playable ? await getPublicSubjectStats(person.id) : null;
   const d30 = stats ? present({ punch: Number(stats.windows.d30.punch ?? 0), cheer: Number(stats.windows.d30.cheer ?? 0), unknown: Number(stats.windows.d30.unknown ?? 0) }) : null;
   return <section className={styles.profile} aria-labelledby="person-name">
-    <Avatar person={person} size={96} />
+    <Avatar person={person} size={112} />
+    {person.image?.rightsStatus === "cleared" && person.image.credit && <a className={styles.photoCredit} href={person.image.sourceUrl} target="_blank" rel="noreferrer">사진: {person.image.credit}</a>}
     <h1 id="person-name">{person.name}</h1>
     <p className={styles.roles}>{currentRole(person)}</p>
+    <OpsEditLink type="people" id={person.id} label="인물 정보" />
     <p className={styles.counts}><span>기록 <b>{person.counts.statements}</b></span><span>평가 <b>{person.counts.evaluationsReceived}</b></span><span>관계 <b>{person.counts.relations}</b></span></p>
     {person.playable && <div className={styles.participation}>
       {d30 && d30.ratio !== null

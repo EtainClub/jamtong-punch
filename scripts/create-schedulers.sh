@@ -22,3 +22,5 @@ create_job() {
 create_job jamtong-rollup "* * * * *" "/api/cron/rollup"
 create_job jamtong-expire "5 0 * * *" "/api/cron/expire"
 create_job jamtong-reconcile "0 4 * * *" "/api/cron/reconcile"
+create_job jamtong-sources "30 5 * * 1" "/api/cron/sources"
+create_job jamtong-anchors "17 * * * *" "/api/cron/anchors"

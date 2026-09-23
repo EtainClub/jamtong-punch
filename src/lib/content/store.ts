@@ -10,6 +10,8 @@ import {
 } from "@/lib/content/derive";
 import type { Kind } from "@/lib/domain";
 import { db } from "@/lib/firebase/admin";
+import type { AnchorType, SourceRefs } from "@/lib/anchor/canonical";
+import { queueAnchor } from "@/lib/anchor/queue";
 
 export const contentTypeSchema = z.enum(["people", "sources", "statements", "evaluations", "events", "topics", "brackets"]);
 export type ContentType = z.infer<typeof contentTypeSchema>;
@@ -45,7 +47,7 @@ const schemas = {
 const META_FIELDS = ["createdAt", "createdBy", "updatedAt", "updatedBy"];
 export const DERIVED_FIELDS: Record<ContentType, string[]> = {
   people: ["counts", "searchTokens", "sourceIds"],
-  sources: [],
+  sources: ["availability"],
   statements: ["sourceIds", "mentionedPersonIds"],
   evaluations: ["sourceIds"],
   events: ["memberIds", "sourceIds"],
@@ -407,6 +409,36 @@ async function refreshDerived(type: ContentType, before: Derived | null, after: 
 
 // ---------------------------------------------------------------- writes
 
+const ANCHORED: Partial<Record<ContentType, AnchorType>> = { statements: "statement", evaluations: "evaluation" };
+
+async function sourceRefs(ids: string[]): Promise<SourceRefs> {
+  const sources = await getMany("sources", ids);
+  return Object.fromEntries([...sources].map(([id, source]) => [id, { url: source.url, videoId: source.video?.videoId ?? null }]));
+}
+
+function citedSourceIds(value: Statement | Evaluation): string[] {
+  return "citation" in value ? [value.citation.sourceId] : value.citations.map((item) => item.sourceId);
+}
+
+// Statements and evaluations are anchored on chain (lib/anchor). A source's
+// url is part of their hash, so editing a source re-queues what cites it.
+async function refreshAnchors(type: ContentType, id: string, value: ContentValue | null) {
+  const anchorType = ANCHORED[type];
+  if (anchorType) {
+    const record = value as Statement | Evaluation | null;
+    await queueAnchor(anchorType, id, record, record ? await sourceRefs(citedSourceIds(record)) : {});
+    return;
+  }
+  if (type !== "sources") return;
+  for (const [citing, citingAnchor] of [["statements", "statement"], ["evaluations", "evaluation"]] as const) {
+    const snapshots = await collection(citing).where("sourceIds", "array-contains", id).get();
+    for (const snapshot of snapshots.docs) {
+      const record = authored(citing, snapshot.data());
+      await queueAnchor(citingAnchor, record.id, record, await sourceRefs(citedSourceIds(record)));
+    }
+  }
+}
+
 async function readStored(type: ContentType, id: string): Promise<Derived | null> {
   const snapshot = await collection(type).doc(id).get();
   if (!snapshot.exists) return null;
@@ -433,6 +465,7 @@ export async function saveContent(type: ContentType, id: string, data: unknown, 
       ...derived,
       ...(type === "people" ? { counts: current.get("counts") ?? EMPTY_PERSON_COUNTS } : {}),
       ...(type === "topics" ? { counts: current.get("counts") ?? EMPTY_TOPIC_COUNTS } : {}),
+      ...(type === "sources" && current.get("availability") ? { availability: current.get("availability") } : {}),
       createdAt: current.get("createdAt") ?? now,
       createdBy: current.get("createdBy") ?? actorUid,
       updatedAt: now,
@@ -440,6 +473,7 @@ export async function saveContent(type: ContentType, id: string, data: unknown, 
     });
   });
   await refreshDerived(type, before, { ...value, ...derived } as Derived);
+  await refreshAnchors(type, id, value);
   return value;
 }
 
@@ -450,6 +484,7 @@ export async function deleteContent(type: ContentType, id: string) {
   if (dependents.length) throw new ContentError(409, `content is used by ${describe(dependents)}`);
   await collection(type).doc(id).delete();
   await refreshDerived(type, before, null);
+  await refreshAnchors(type, id, null);
   return true;
 }
 

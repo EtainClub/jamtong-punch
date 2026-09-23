@@ -17,7 +17,7 @@ function Disc({ member, x, y, r, clipId, dark }: { member: Member; x: number; y:
   return <>
     <circle cx={x} cy={y} r={r} className={dark ? styles.graphCenter : styles.graphNode} />
     {src
-      ? <><clipPath id={clipId}><circle cx={x} cy={y} r={r} /></clipPath><image href={src} x={x - r} y={y - r} width={r * 2} height={r * 2} clipPath={`url(#${clipId})`} preserveAspectRatio="xMidYMid slice" /></>
+      ? <><clipPath id={clipId}><circle cx={x} cy={y} r={r} /></clipPath><image href={src} x={x - r} y={y - r} width={r * 2} height={r * 2} clipPath={`url(#${clipId})`} preserveAspectRatio="xMidYMin slice" /></>
       : <text x={x} y={y} className={styles.graphInitial} style={{ fontSize: r * 0.8 }} dominantBaseline="central" textAnchor="middle">{member.name.slice(0, 1)}</text>}
   </>;
 }

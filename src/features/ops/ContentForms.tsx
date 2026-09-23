@@ -3,6 +3,8 @@
 import { useRef, useState, type ReactNode } from "react";
 import { emptyCitation, formatTimecode, orNull, parseTimecode, slugify, youtubeVideoId, type Citation, type ContentType, type Draft } from "./content-form";
 import { detectMentions } from "@/lib/content/derive";
+import { firebaseJsonFetch } from "@/lib/firebase/api";
+import { useFirebaseAuth } from "@/lib/firebase/auth";
 import styles from "./ops-content.module.css";
 
 export type Refs = Record<ContentType, Draft[]>;
@@ -72,6 +74,11 @@ function CitationEditor({ value, sources, onChange, onRemove, segmentRequired = 
     </> : <Field label="위치" optional hint="문단, 쪽수 등"><input value={value.locator ?? ""} onChange={(event) => set({ locator: orNull(event.target.value) })} /></Field>}
     {videoId && value.startSec !== null && <a className={styles.help} href={`https://www.youtube.com/watch?v=${videoId}&t=${value.startSec}`} target="_blank" rel="noreferrer">구간 열어 확인 ↗</a>}
     {onRemove && <button className={styles.secondary} onClick={onRemove} type="button">출처 빼기</button>}
+    <Field label="구간 원문(전사)" optional wide hint="인용한 구간에서 한 말을 그대로 받아 적습니다. 영상이 사라져도 임통에 남습니다. 구간 밖의 내용은 넣지 않습니다"><textarea value={value.transcript ?? ""} onChange={(event) => { const transcript = orNull(event.target.value); set({ transcript, transcriptOrigin: transcript ? value.transcriptOrigin ?? "manual" : null, transcriptVerified: transcript ? value.transcriptVerified : false }); }} /></Field>
+    {value.transcript && <>
+      <Field label="전사 방식" required><Select value={value.transcriptOrigin ?? "manual"} onChange={(origin) => set({ transcriptOrigin: origin as Citation["transcriptOrigin"] })} choices={[["manual", "사람이 받아 적음"], ["auto-caption", "유튜브 자동 자막"], ["asr", "음성 인식"]]} /></Field>
+      <label className={styles.checkbox}><input type="checkbox" checked={value.transcriptVerified} onChange={(event) => set({ transcriptVerified: event.target.checked })} />원본과 대조해 확인함</label>
+    </>}
   </div>;
 }
 
@@ -132,7 +139,7 @@ function people(refs: Refs) { return withStatus(refs.people, (item) => str(item.
 function topics(refs: Refs) { return withStatus(refs.topics, (item) => str(item.name)); }
 
 type Role = { title: string; org: string | null; from: string | null; to: string | null; citation: Citation };
-type Image = { path: string; sourceUrl: string; license: string; rightsStatus: string };
+type Image = { path: string; sourceUrl: string; license: string; rightsStatus: string; credit: string | null };
 
 function PersonForm({ draft, update, refs, isNew, image: upload }: FormProps) {
   const roles = list<Role>(draft.roles);
@@ -167,8 +174,9 @@ function PersonForm({ draft, update, refs, isNew, image: upload }: FormProps) {
           <Field label="원본 출처 URL" required><input type="url" value={image.sourceUrl} onChange={(event) => setImage({ sourceUrl: event.target.value })} placeholder="https://" /></Field>
           <Field label="라이선스" required><Select value={image.license} onChange={(license) => setImage({ license })} choices={[["public", "공개"], ["cleared", "권리 확인"], ["link-only", "링크만"]]} /></Field>
           <Field label="권리 상태" required hint="공개 인물의 사진은 '확인됨'이어야 합니다"><Select value={image.rightsStatus} onChange={(rightsStatus) => setImage({ rightsStatus })} choices={[["pending", "확인 대기"], ["cleared", "확인됨"], ["replace-requested", "교체 요청"]]} /></Field>
+          <Field label="저작자 표시" optional hint="CC BY·공공누리 사진은 필수. 예: 대한민국 대통령실 · CC BY 3.0"><input value={image.credit ?? ""} onChange={(event) => setImage({ credit: orNull(event.target.value) })} /></Field>
         </div>
-      </> : <><p className={styles.help}>사진이 없어도 아카이브에는 공개할 수 있습니다. 게임 대상이 되려면 권리가 확인된 사진이 필요합니다.</p><button className={styles.secondary} onClick={() => update({ image: { path: "", sourceUrl: "", license: "public", rightsStatus: "pending" } })} type="button">사진 추가</button></>}
+      </> : <><p className={styles.help}>사진이 없어도 아카이브에는 공개할 수 있습니다. 게임 대상이 되려면 권리가 확인된 사진이 필요합니다.</p><button className={styles.secondary} onClick={() => update({ image: { path: "", sourceUrl: "", license: "public", rightsStatus: "pending", credit: null } })} type="button">사진 추가</button></>}
     </fieldset>
     <label className={`${styles.checkbox} ${styles.wide}`}><input type="checkbox" checked={draft.playable === true} disabled={image?.rightsStatus !== "cleared"} onChange={(event) => update({ playable: event.target.checked })} />게임 대상으로 쓰기 <small>권리가 확인된 사진이 있어야 켤 수 있습니다</small></label>
     <Status draft={draft} update={update} />
@@ -283,7 +291,10 @@ function TopicForm({ draft, update, refs }: FormProps) {
 
 type Video = { platform: "youtube"; videoId: string; durationSec: number | null };
 
-function SourceForm({ draft, update }: FormProps) {
+function SourceForm({ draft, update, isNew }: FormProps) {
+  const { user } = useFirebaseAuth();
+  const [busy, setBusy] = useState<"lookup" | "archive" | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const video = draft.video as Video | null;
   const kind = str(draft.kind);
   function changeUrl(url: string) {
@@ -292,8 +303,29 @@ function SourceForm({ draft, update }: FormProps) {
       ? { url, video: { platform: "youtube", videoId, durationSec: video?.durationSec ?? null }, kind: kind === "video" || kind === "broadcast" ? kind : "video" }
       : { url, video: null });
   }
+  async function lookup() {
+    if (!user || !video) return;
+    setBusy("lookup"); setMessage(null);
+    try {
+      const found = await firebaseJsonFetch<{ title: string | null; channel: string | null }>(user, `/api/ops/sources/lookup?videoId=${video.videoId}`);
+      update({ ...(found.title ? { title: found.title } : {}), ...(found.channel ? { publisher: found.channel } : {}) });
+      setMessage("제목과 채널을 채웠습니다. 게시일과 영상 길이는 직접 확인해 넣어 주세요.");
+    } catch (cause) { setMessage(cause instanceof Error ? cause.message : "영상 정보를 가져오지 못했습니다."); }
+    finally { setBusy(null); }
+  }
+  async function archive() {
+    if (!user) return;
+    setBusy("archive"); setMessage("보존본을 만드는 중입니다. 1분 정도 걸릴 수 있습니다…");
+    try {
+      const { item } = await firebaseJsonFetch<{ item: Draft }>(user, `/api/ops/sources/${draft.id}/archive`, { method: "POST" });
+      update({ archiveUrl: item.archiveUrl });
+      setMessage("보존본을 저장했습니다.");
+    } catch (cause) { setMessage(cause instanceof Error ? cause.message : "보존본을 만들지 못했습니다."); }
+    finally { setBusy(null); }
+  }
   return <>
-    <Field label="URL" required wide hint="유튜브 주소를 넣으면 영상 정보가 자동으로 채워집니다"><input type="url" value={str(draft.url)} onChange={(event) => changeUrl(event.target.value)} placeholder="https://" /></Field>
+    <Field label="URL" required wide hint="유튜브 주소를 넣으면 영상 ID가 채워지고, 제목·채널을 가져올 수 있습니다"><input type="url" value={str(draft.url)} onChange={(event) => changeUrl(event.target.value)} placeholder="https://" /></Field>
+    {video && <div className={styles.wide}><button className={styles.secondary} onClick={() => void lookup()} disabled={busy !== null} type="button">{busy === "lookup" ? "가져오는 중…" : "영상 제목·채널 가져오기"}</button></div>}
     <Field label="종류" required><Select value={kind} onChange={(next) => update({ kind: next, ...(next === "video" || next === "broadcast" ? {} : { video: null }) })} choices={sourceKinds} /></Field>
     <Field label="발행일" required><input type="date" value={str(draft.publishedAt)} onChange={(event) => update({ publishedAt: event.target.value })} /></Field>
     <Field label="제목" required><input value={str(draft.title)} onChange={(event) => update({ title: event.target.value })} /></Field>
@@ -302,7 +334,13 @@ function SourceForm({ draft, update }: FormProps) {
       <Field label="유튜브 영상 ID"><output>{video.videoId}</output></Field>
       <Field label="영상 길이" optional hint="적어 두면 구간이 영상 길이를 넘는지 검사합니다"><TimecodeInput value={video.durationSec} onChange={(durationSec) => update({ video: { ...video, durationSec } })} /></Field>
     </>}
+    <Field label="설명란 스냅샷" optional wide hint="영상·기사의 설명을 등록 시점 그대로 옮겨 둡니다. 원본이 사라져도 무엇이었는지 남습니다"><textarea value={str(draft.description)} onChange={(event) => update({ description: orNull(event.target.value) })} /></Field>
+    <Field label="확인한 날" optional hint="위 정보를 원본에서 확인한 날"><input type="date" value={str(draft.capturedAt)} onChange={(event) => update({ capturedAt: orNull(event.target.value) })} /></Field>
     <Field label="보존본 URL" optional hint="원본이 사라질 때를 대비한 아카이브 주소"><input type="url" value={str(draft.archiveUrl)} onChange={(event) => update({ archiveUrl: orNull(event.target.value) })} placeholder="https://web.archive.org/…" /></Field>
+    <div className={styles.wide}>{isNew
+      ? <p className={styles.help}>먼저 저장하면 인터넷 아카이브에 보존본을 만들 수 있습니다.</p>
+      : <button className={styles.secondary} onClick={() => void archive()} disabled={busy !== null} type="button">{busy === "archive" ? "보존본 만드는 중…" : "인터넷 아카이브에 보존본 만들기"}</button>}
+      {message && <p className={styles.help} aria-live="polite">{message}</p>}</div>
     <Field label="라이선스" required><Select value={str(draft.license)} onChange={(license) => update({ license })} choices={[["public", "공개"], ["quotable", "인용 가능"], ["link-only", "링크만"]]} /></Field>
     <Field label="권리 상태" required><Select value={str(draft.rightsStatus)} onChange={(rightsStatus) => update({ rightsStatus })} choices={[["pending", "확인 대기"], ["cleared", "확인됨"], ["flagged", "문제 있음"]]} /></Field>
   </>;

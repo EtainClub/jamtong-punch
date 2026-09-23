@@ -16,8 +16,15 @@ export const citationSchema = z.object({
   startSec: z.number().int().min(0).nullable().default(null),
   endSec: z.number().int().min(1).nullable().default(null),
   locator: z.string().min(1).nullable().default(null),
+  // Verbatim text of the cited segment, kept by 임통 so the record survives
+  // the video. Only the cited segment, never a whole programme: quoting a
+  // part is defensible, republishing a whole work is not.
+  transcript: z.string().min(1).nullable().default(null),
+  transcriptOrigin: z.enum(["manual", "auto-caption", "asr"]).nullable().default(null),
+  transcriptVerified: z.boolean().default(false),
 }).strict().refine((value) => (value.startSec === null) === (value.endSec === null), "citation segment needs both start and end")
-  .refine((value) => value.startSec === null || value.endSec! > value.startSec, "citation segment end must be after start");
+  .refine((value) => value.startSec === null || value.endSec! > value.startSec, "citation segment end must be after start")
+  .refine((value) => (value.transcript === null) === (value.transcriptOrigin === null), "a transcript needs its origin");
 
 export const sourceSchema = z.object({
   id,
@@ -27,6 +34,10 @@ export const sourceSchema = z.object({
   url: z.url(),
   archiveUrl: z.url().nullable().default(null),
   publishedAt: date,
+  // Snapshot taken at registration, kept so the source can still be described
+  // after the original page or video is gone.
+  description: z.string().min(1).nullable().default(null),
+  capturedAt: date.nullable().default(null),
   video: z.object({
     platform: z.literal("youtube"),
     videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
@@ -53,6 +64,9 @@ export const personSchema = z.object({
     sourceUrl: z.url(),
     license: z.enum(["cleared", "public", "link-only"]),
     rightsStatus: z.enum(["pending", "cleared", "replace-requested"]),
+    // Attribution shown next to the photo, e.g. "대한민국 대통령실 · CC BY 3.0".
+    // Free licences (CC BY, 공공누리) are conditional on it.
+    credit: z.string().min(1).nullable().default(null),
   }).strict().nullable().default(null),
   playable: z.boolean().default(false),
   status,
@@ -170,4 +184,11 @@ export type Relationship = {
   firstAt: string;
   lastAt: string;
   evidence: RelationshipEvidence[];
+};
+
+// Written by the source checker (cron), never by operators.
+export type SourceAvailability = {
+  status: "live" | "unavailable" | "restricted" | "unknown";
+  checkedAt: string;
+  httpStatus: number | null;
 };

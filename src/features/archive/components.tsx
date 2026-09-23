@@ -1,15 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { Citation, Evaluation, Person, Source } from "@/content/schema";
-import type { StatementView } from "@/lib/archive/read";
-import { citationHref, citationLabel, evaluationFormatLabels, formatDate, formatShortDate, statementKindLabels, youtubeThumbnail } from "@/lib/content/format";
+import type { Citation, Evaluation, Person } from "@/content/schema";
+import type { SourceView, StatementView } from "@/lib/archive/read";
+import { citationHref, citationLabel, evaluationFormatLabels, formatDate, formatShortDate, formatTimecode, statementKindLabels, youtubeThumbnail } from "@/lib/content/format";
 import type { Stance } from "@/lib/domain";
 import { present } from "@/lib/stats/present";
 import { StanceButtons } from "./StanceButtons";
 import styles from "./archive.module.css";
 
 export type Names = Record<string, string>;
-export type Sources = Record<string, Source>;
+export type Sources = Record<string, SourceView>;
 
 export function SiteHeader({ current }: { current?: "people" | "topics" }) {
   return <header className={styles.siteHeader}><nav aria-label="주요 메뉴">
@@ -32,12 +32,40 @@ export function currentRole(person: Person): string {
   return current.length ? current.join(" · ") : person.summary;
 }
 
+export function isGone(source: SourceView): boolean {
+  return source.availability?.status === "unavailable" || source.availability?.status === "restricted";
+}
+
 export function CitationLinks({ citations, sources }: { citations: Citation[]; sources: Sources }) {
   return <ul className={styles.citations}>{citations.map((citation, index) => {
     const source = sources[citation.sourceId];
     if (!source) return null;
-    return <li key={index}><a href={citationHref(citation, source)} target="_blank" rel="noreferrer">{citationLabel(citation, source)}</a> <small>{source.publisher}</small></li>;
+    return <li key={index}>
+      <a href={citationHref(citation, source)} target="_blank" rel="noreferrer" className={isGone(source) ? styles.deadLink : undefined}>{citationLabel(citation, source)}</a> <small>{source.publisher}</small>
+      {isGone(source) && <span className={styles.gone}>{source.availability!.status === "unavailable" ? "원본 삭제됨" : "원본 비공개"} · {formatShortDate(source.availability!.checkedAt)} 확인</span>}
+      {source.archiveUrl && <a className={styles.archiveLink} href={source.archiveUrl} target="_blank" rel="noreferrer">보존본</a>}
+    </li>;
   })}</ul>;
+}
+
+const ORIGIN_LABELS = { manual: "사람이 받아 적음", "auto-caption": "자동 자막", asr: "음성 인식" } as const;
+
+// The words of the cited segment as 임통 keeps them. Collapsed while the
+// original is reachable, opened and labelled once it is gone.
+export function Transcripts({ citations, sources }: { citations: Citation[]; sources: Sources }) {
+  const kept = citations.filter((citation) => citation.transcript);
+  if (!kept.length) return null;
+  return <>{kept.map((citation, index) => {
+    const source = sources[citation.sourceId];
+    const gone = source ? isGone(source) : false;
+    const segment = citation.startSec !== null ? ` ${formatTimecode(citation.startSec)}–${formatTimecode(citation.endSec)}` : "";
+    return <details key={index} className={styles.transcript} open={gone}>
+      <summary>구간 원문{segment}</summary>
+      {gone && <p className={styles.gone}>원본을 더 볼 수 없습니다. 아래는 임통이 보관한 원문입니다.</p>}
+      <p className={styles.transcriptText}>{citation.transcript}</p>
+      <small>{ORIGIN_LABELS[citation.transcriptOrigin ?? "manual"]} · {citation.transcriptVerified ? "원본과 대조 확인됨" : "대조 확인 전"}</small>
+    </details>;
+  })}</>;
 }
 
 function AssertionBadge({ type }: { type: string }) {
@@ -62,11 +90,13 @@ export function StatementCard({ statement, sources, names, topics, showSpeaker =
     <h3 className={styles.headline}>{statement.headline}</h3>
     {statement.quote && <blockquote className={styles.quote}>“{statement.quote}”</blockquote>}
     <CitationLinks citations={statement.citations} sources={sources} />
+    <Transcripts citations={statement.citations} sources={sources} />
     <details className={styles.context}><summary>맥락</summary><p>{statement.context}</p></details>
-    {(statement.topicIds.length > 0 || mentioned.length > 0) && <div className={styles.links}>
+    <div className={styles.links}>
       {statement.topicIds.filter((id) => topics[id]).map((id) => <Link key={id} className={styles.tag} href={compareHref ? compareHref(id) : `/topics/${id}`}>#{topics[id]}{compareHref ? " · 같은 주제 발언" : ""}</Link>)}
       {mentioned.map((id) => <Link key={id} href={`/people/${id}`}>언급: {names[id]}</Link>)}
-    </div>}
+      <Link className={styles.verifyLink} href={`/verify/statement/${statement.id}`}>⛓ 블록체인 대조</Link>
+    </div>
     {statement.corrections.length > 0 && <details className={styles.context}><summary>정정 {statement.corrections.length}건</summary>{statement.corrections.map((item, index) => <p key={index}>{formatShortDate(item.at)} {item.note}</p>)}</details>}
     {stats && <Reaction id={statement.id} counts={stats[statement.id]} />}
   </article>;
@@ -101,7 +131,8 @@ export function EvaluationCard({ evaluation, sources, names, topics, responses =
   evaluation: Evaluation; sources: Sources; names: Names; topics: Names; responses?: Evaluation[]; showTarget?: boolean;
 }) {
   const source = sources[evaluation.citation.sourceId];
-  const thumbnail = source ? youtubeThumbnail(source) : null;
+  // A dead video has no thumbnail to show; the kept transcript stands in.
+  const thumbnail = source && !isGone(source) ? youtubeThumbnail(source) : null;
   const evaluatorName = evaluation.evaluator.personId && names[evaluation.evaluator.personId]
     ? <Link href={`/people/${evaluation.evaluator.personId}`}>{evaluation.evaluator.name}</Link>
     : evaluation.evaluator.name;
@@ -114,10 +145,12 @@ export function EvaluationCard({ evaluation, sources, names, topics, responses =
     <p className={styles.claim}>{evaluation.claim}</p>
     {evaluation.quote && <blockquote className={styles.quote}>“{evaluation.quote}”</blockquote>}
     {!thumbnail && <CitationLinks citations={[evaluation.citation]} sources={sources} />}
+    <Transcripts citations={[evaluation.citation]} sources={sources} />
     <div className={styles.links}>
       {evaluation.topicIds.filter((id) => topics[id]).map((id) => <Link key={id} className={styles.tag} href={`/topics/${id}`}>#{topics[id]}</Link>)}
       {evaluation.eventIds.map((id) => <Link key={id} href={`/events/${id}`}>관련 사건</Link>)}
       {responses.length > 0 && <span>↳ 이 평가에 대한 반론 {responses.length}: {responses.map((item) => item.evaluator.name).join(", ")}</span>}
+      <Link className={styles.verifyLink} href={`/verify/evaluation/${evaluation.id}`}>⛓ 블록체인 대조</Link>
     </div>
   </article>;
 }

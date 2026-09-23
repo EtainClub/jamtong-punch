@@ -1,5 +1,8 @@
 import { revalidatePath, revalidateTag } from "next/cache";
+import { after } from "next/server";
+import { anchorPending } from "@/lib/anchor/run";
 import { CONTENT_TAG } from "@/lib/archive/read";
+import { refreshSourceAvailability } from "@/lib/content/check-sources";
 import { ContentError, contentTypeSchema, deleteContent, saveContent } from "@/lib/content/store";
 import { verifyCaller } from "@/lib/guard/identity";
 import { checkOrigin } from "@/lib/guard/origin";
@@ -31,7 +34,10 @@ export async function PUT(req: Request, context: Context) {
     const { caller, type, id } = await target(req, context);
     const body = await req.json() as { data?: unknown };
     const item = await saveContent(type, id, body.data, caller.uid);
+    // A new or edited source is checked right away so its status is never blank.
+    if (type === "sources") await refreshSourceAvailability(id);
     expireContent();
+    anchorAfterResponse(type);
     return Response.json({ item });
   } catch (error) {
     return contentRefusal(error);
@@ -42,7 +48,7 @@ export async function DELETE(req: Request, context: Context) {
   try {
     const { type, id } = await target(req, context);
     const deleted = await deleteContent(type, id);
-    if (deleted) expireContent();
+    if (deleted) { expireContent(); anchorAfterResponse(type); }
     return deleted ? new Response(null, { status: 204 }) : new Response(null, { status: 404 });
   } catch (error) {
     return contentRefusal(error);
@@ -54,4 +60,18 @@ export async function DELETE(req: Request, context: Context) {
 function expireContent() {
   revalidateTag(CONTENT_TAG, { expire: 0 });
   revalidatePath("/", "layout");
+}
+
+// Statements and evaluations (and sources, whose url is part of their hash)
+// may have queued a new anchor version. Send it after responding, so the save
+// does not wait on a Steem node; the hourly job retries anything that fails.
+function anchorAfterResponse(type: string) {
+  if (type !== "statements" && type !== "evaluations" && type !== "sources") return;
+  after(async () => {
+    try {
+      await anchorPending();
+    } catch (error) {
+      console.error("anchors: send after save failed; the hourly job will retry", error);
+    }
+  });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { firebaseFormFetch, firebaseJsonFetch } from "@/lib/firebase/api";
 import { useFirebaseAuth } from "@/lib/firebase/auth";
 import { contentTypes, emptyDraft, itemLabel, type ContentType, type Draft } from "./content-form";
@@ -32,6 +32,7 @@ export function OpsContentManager() {
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const deepLinkHandled = useRef(false);
 
   const names = useMemo(() => new Map(refs.people.map((item) => [item.id, String(item.name ?? item.id)])), [refs.people]);
   const typeName = contentTypes.find(([key]) => key === type)?.[1] ?? type;
@@ -44,6 +45,18 @@ export function OpsContentManager() {
     try {
       const lists = await Promise.all(contentTypes.map(([key]) => firebaseJsonFetch<{ items: Draft[] }>(user, `/api/ops/content?type=${key}`)));
       setRefs(Object.fromEntries(contentTypes.map(([key], index) => [key, lists[index].items])) as unknown as Refs);
+      // A link from a public page (?type=people&id=…) opens that item once.
+      if (!deepLinkHandled.current) {
+        deepLinkHandled.current = true;
+        const params = new URLSearchParams(window.location.search);
+        const index = contentTypes.findIndex(([key]) => key === params.get("type"));
+        if (index >= 0) {
+          const linkedType = contentTypes[index][0];
+          const linked = lists[index].items.find((item) => item.id === params.get("id"));
+          setType(linkedType); setSelectedId(linked?.id ?? ""); setDraft(linked ?? emptyDraft(linkedType)); setFormKey((key) => key + 1);
+          if (params.get("id") && !linked) setNotice({ ok: false, text: `'${params.get("id")}' 항목을 찾지 못했습니다.` });
+        }
+      }
     } catch (cause) { setNotice({ ok: false, text: failure("목록을 불러오지 못했습니다", cause) }); }
     finally { setLoading(false); }
   }, [user]);
@@ -61,7 +74,7 @@ export function OpsContentManager() {
     try {
       const form = new FormData(); form.set("file", file);
       const result = await firebaseFormFetch<{ url: string }>(user, "/api/ops/media", form);
-      setDraft((current) => ({ ...current, image: { ...(current.image as Record<string, unknown> ?? { sourceUrl: "", license: "public", rightsStatus: "pending" }), path: result.url } }));
+      setDraft((current) => ({ ...current, image: { ...(current.image as Record<string, unknown> ?? { sourceUrl: "", license: "public", rightsStatus: "pending", credit: null }), path: result.url } }));
       setNotice({ ok: true, text: "이미지를 올렸습니다. 원본 출처와 권리 상태를 이어서 입력하세요." });
     } catch (cause) { setNotice({ ok: false, text: failure("이미지를 올리지 못했습니다", cause) }); }
     finally { setUploading(false); }

@@ -17,7 +17,7 @@ export const contentTypes = [
 
 export type ContentType = (typeof contentTypes)[number][0];
 export type Draft = Record<string, unknown> & { id: string };
-export type Citation = { sourceId: string; startSec: number | null; endSec: number | null; locator: string | null };
+export type Citation = { sourceId: string; startSec: number | null; endSec: number | null; locator: string | null; transcript: string | null; transcriptOrigin: "manual" | "auto-caption" | "asr" | null; transcriptVerified: boolean };
 
 export function today() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -31,7 +31,7 @@ export function slugify(value: string) {
   return value.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-export const emptyCitation = (): Citation => ({ sourceId: "", startSec: null, endSec: null, locator: null });
+export const emptyCitation = (): Citation => ({ sourceId: "", startSec: null, endSec: null, locator: null, transcript: null, transcriptOrigin: null, transcriptVerified: false });
 
 export function emptyDraft(type: ContentType): Draft {
   const base = { status: "draft", corrections: [] };
@@ -41,7 +41,7 @@ export function emptyDraft(type: ContentType): Draft {
     case "evaluations": return { id: generatedId("evaluation"), targetPersonId: "", evaluator: { personId: null, name: "", descriptor: "" }, occurredAt: today(), datePrecision: "day", format: "video", claim: "", quote: null, citation: emptyCitation(), topicIds: [], eventIds: [], respondsTo: null, ...base };
     case "events": return { id: generatedId("event"), title: "", occurredAt: today(), endAt: null, datePrecision: "day", summary: "", participants: [], topicIds: [], citations: [emptyCitation()], ...base };
     case "topics": return { id: generatedId("topic"), name: "", description: "", parentId: null, ...base };
-    case "sources": return { id: generatedId("source"), kind: "article", title: "", publisher: "", url: "", archiveUrl: null, publishedAt: today(), video: null, license: "link-only", rightsStatus: "pending" };
+    case "sources": return { id: generatedId("source"), kind: "article", title: "", publisher: "", url: "", archiveUrl: null, publishedAt: today(), description: null, capturedAt: today(), video: null, license: "link-only", rightsStatus: "pending" };
     case "brackets": return { id: generatedId("bracket"), status: "draft", questionId: "more-problematic", statementIds: [] };
   }
 }

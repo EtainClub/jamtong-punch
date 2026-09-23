@@ -48,3 +48,11 @@ env:
   - variable: RECONCILE_READ_BUDGET
     value: "50000"
     availability: [RUNTIME]
+  - variable: STEEM_ANCHOR_ACCOUNT
+    value: ppebak
+    availability: [RUNTIME]
+  # Posting key of the anchor account. Set it once with:
+  #   firebase apphosting:secrets:set STEEM_ANCHOR_POSTING --project jamtong-punch
+  - variable: STEEM_ANCHOR_POSTING
+    secret: STEEM_ANCHOR_POSTING
+    availability: [RUNTIME]
