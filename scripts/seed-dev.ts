@@ -1,13 +1,13 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { db } from "../src/lib/firebase/admin";
-import type { Subject } from "../src/content/schema";
+import type { Person } from "../src/content/schema";
 import { shiftDate, kstDate } from "../src/lib/date/kst";
 
 if (!process.env.FIRESTORE_EMULATOR_HOST) throw new Error("seed-dev only runs against FIRESTORE_EMULATOR_HOST");
 
-const snapshots = await db.collection("contentSubjects").where("status", "==", "published").get();
-const publishedSubjects = snapshots.docs.map((snapshot) => snapshot.data() as Subject);
-if (!publishedSubjects.length) throw new Error("seed-dev requires published CMS subjects; no political content is generated automatically");
+const snapshots = await db.collection("people").where("status", "==", "published").where("playable", "==", true).get();
+const publishedSubjects = snapshots.docs.map((snapshot) => snapshot.data() as Person);
+if (!publishedSubjects.length) throw new Error("seed-dev requires published playable CMS people; no political content is generated automatically");
 
 const users = 200;
 const days = 40;
@@ -22,7 +22,7 @@ for (let user = 0; user < users; user += 1) {
     const stance = (["punch", "cheer", "unknown"] as const)[(user * 7 + offset) % 3];
     writes.push((batch) => batch.set(db.doc(`users/seed-${user}/stances/${subject.id}_${date}`), {
       subjectId: subject.id,
-      kind: subject.kind,
+      kind: "person",
       shard: 0,
       date,
       stance,

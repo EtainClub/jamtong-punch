@@ -1,4 +1,6 @@
-import { contentTypeSchema, deleteContent, saveContent } from "@/lib/content/store";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CONTENT_TAG } from "@/lib/archive/read";
+import { ContentError, contentTypeSchema, deleteContent, saveContent } from "@/lib/content/store";
 import { verifyCaller } from "@/lib/guard/identity";
 import { checkOrigin } from "@/lib/guard/origin";
 import { Refusal, refusalResponse } from "@/lib/guard/refusal";
@@ -7,33 +9,49 @@ export const runtime = "nodejs";
 
 type Context = { params: Promise<{ type: string; id: string }> };
 
-export async function PUT(req: Request, { params }: Context) {
+async function target(req: Request, { params }: Context) {
+  checkOrigin(req);
+  const caller = await verifyCaller(req);
+  if (!caller.isOps) throw new Refusal(403, "ops-required");
+  const { type: rawType, id } = await params;
+  const type = contentTypeSchema.safeParse(rawType);
+  if (!type.success || !/^[a-z0-9-]+$/.test(id)) throw new Refusal(400, "invalid-content-target");
+  return { caller, type: type.data, id };
+}
+
+// Content validation messages are written for operators and name the failing
+// field, so they are returned as the client code instead of a generic refusal.
+function contentRefusal(error: unknown) {
+  if (error instanceof ContentError) return refusalResponse(new Refusal(error.status, error.message, error.message));
+  return refusalResponse(error);
+}
+
+export async function PUT(req: Request, context: Context) {
   try {
-    checkOrigin(req);
-    const caller = await verifyCaller(req);
-    if (!caller.isOps) throw new Refusal(403, "ops-required");
-    const { type: rawType, id } = await params;
-    const type = contentTypeSchema.safeParse(rawType);
-    if (!type.success || !/^[a-z0-9-]+$/.test(id)) throw new Refusal(400, "invalid-content-target");
+    const { caller, type, id } = await target(req, context);
     const body = await req.json() as { data?: unknown };
-    return Response.json({ item: await saveContent(type.data, id, body.data, caller.uid) });
+    const item = await saveContent(type, id, body.data, caller.uid);
+    expireContent();
+    return Response.json({ item });
   } catch (error) {
-    if (error instanceof Error && /(unknown|mismatch|needs|usable)/.test(error.message)) return refusalResponse(new Refusal(400, error.message));
-    return refusalResponse(error);
+    return contentRefusal(error);
   }
 }
 
-export async function DELETE(req: Request, { params }: Context) {
+export async function DELETE(req: Request, context: Context) {
   try {
-    checkOrigin(req);
-    const caller = await verifyCaller(req);
-    if (!caller.isOps) throw new Refusal(403, "ops-required");
-    const { type: rawType, id } = await params;
-    const type = contentTypeSchema.safeParse(rawType);
-    if (!type.success || !/^[a-z0-9-]+$/.test(id)) throw new Refusal(400, "invalid-content-target");
-    return (await deleteContent(type.data, id)) ? new Response(null, { status: 204 }) : new Response(null, { status: 404 });
+    const { type, id } = await target(req, context);
+    const deleted = await deleteContent(type, id);
+    if (deleted) expireContent();
+    return deleted ? new Response(null, { status: 204 }) : new Response(null, { status: 404 });
   } catch (error) {
-    if (error instanceof Error && /used by/.test(error.message)) return refusalResponse(new Refusal(409, error.message));
-    return refusalResponse(error);
+    return contentRefusal(error);
   }
+}
+
+// Operators expect a published change to show on the next page load, so the
+// content cache is expired outright rather than served stale while refreshing.
+function expireContent() {
+  revalidateTag(CONTENT_TAG, { expire: 0 });
+  revalidatePath("/", "layout");
 }

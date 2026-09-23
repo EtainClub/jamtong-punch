@@ -40,7 +40,7 @@ let environment: RulesTestEnvironment;
 
   test("blocks direct CMS reads and writes, including an ops custom claim", async () => {
     const operator = environment.authenticatedContext("operator", { ops: true }).firestore();
-    await assertFails(getDoc(doc(operator, "contentSubjects/example")));
-    await assertFails(setDoc(doc(operator, "contentSubjects/example"), { id: "example", status: "published" }));
+    await assertFails(getDoc(doc(operator, "people/example")));
+    await assertFails(setDoc(doc(operator, "people/example"), { id: "example", status: "published" }));
   });
 });

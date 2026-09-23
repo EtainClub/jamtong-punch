@@ -32,3 +32,18 @@ export function invalidateStats(subjectIds: Iterable<string>) {
     // No cache context exists outside a Route Handler/server render.
   }
 }
+
+// Whole-period counts for a page of statements in one read. A statement is a
+// fixed past event, so its figure uses the `all` window (latest stance per
+// participant), not the 30-day window used for people.
+export function getStatementStats(statementIds: string[]) {
+  const ids = [...new Set(statementIds)].sort();
+  return unstable_cache(async (): Promise<Record<string, Record<"punch" | "cheer" | "unknown", number>>> => {
+    if (!ids.length) return {};
+    const snapshots = await db.getAll(...ids.map((id) => db.doc(`subjectStats/${id}`)));
+    return Object.fromEntries(snapshots.filter((snapshot) => snapshot.exists && snapshot.get("schemaVersion") === 2).map((snapshot) => {
+      const all = (snapshot.get("windows")?.all ?? {}) as Record<string, number>;
+      return [snapshot.id, { punch: Number(all.punch ?? 0), cheer: Number(all.cheer ?? 0), unknown: Number(all.unknown ?? 0) }];
+    }));
+  }, ["statement-stats", ...ids], { revalidate: 60, tags: ids.map((id) => `stats:${id}`) })();
+}

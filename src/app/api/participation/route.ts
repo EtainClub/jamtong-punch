@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     return Response.json(await submitParticipation(uid, parsed.data));
   } catch (error) {
     if (error instanceof z.ZodError) return refusalResponse(new Refusal(400, "invalid-body"));
-    if (error instanceof Error && ["duplicate-subject", "invalid-game-size", "unknown or unpublished subject"].some((reason) => error.message.includes(reason))) {
+    if (error instanceof Error && ["duplicate-subject", "invalid-game-size", "unknown or unpublished", "is not playable"].some((reason) => error.message.includes(reason))) {
       return refusalResponse(new Refusal(400, "invalid-participation"));
     }
     return refusalResponse(error);

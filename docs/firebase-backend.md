@@ -7,6 +7,10 @@
 
 ## 0. 개정 이력
 
+### rev. 4 — 인물 아카이브 콘텐츠 (2026-09-23)
+
+콘텐츠 컬렉션이 [`people-archive-design.md`](./people-archive-design.md) 5장으로 바뀌었다. `contentSubjects`·`contentSources`·`contentRecords`·`contentBrackets`는 쓰지 않고 `people`·`sources`·`statements`·`evaluations`·`events`·`topics`·`brackets`를 쓴다. `relationships`와 `people.counts`·`topics.counts`는 콘텐츠 저장 시 서버가 다시 계산하는 파생 문서이고(`src/lib/content/store.ts`), 어긋났을 때는 `pnpm rebuild-derived`로 전부 다시 만든다. 원장의 `kind`는 `person | statement`다. 클라이언트 규칙은 그대로 전부 차단이다.
+
 ### rev. 3 — 운영 CMS
 
 콘텐츠를 코드 배열에 넣어 배포하는 방식은 운영 UI 등록 요구와 맞지 않는다. `contentSubjects`·`contentSources`·`contentRecords`·`contentBrackets`를 Firestore 신뢰 원천으로 바꾸고, `/ops/content`에서 `ops` 운영자가 등록·수정·공개·보관한다. 클라이언트 Firestore 쓰기는 여전히 전부 차단하고, 콘텐츠 변경도 App Check·ID 토큰·Custom Claim을 확인하는 Route Handler만 수행한다.

@@ -1,6 +1,6 @@
 import { FieldPath, FieldValue, Timestamp, type DocumentSnapshot } from "firebase-admin/firestore";
 import { cutoff } from "@/lib/date/kst";
-import type { Game, PreviousStance, Stance } from "@/lib/domain";
+import { listedInIndex, type Game, type Kind, type PreviousStance, type Stance } from "@/lib/domain";
 import { db } from "@/lib/firebase/admin";
 import { summarizePendingAbuse } from "@/lib/guard/abuse";
 import { invalidateStats } from "@/lib/stats/read";
@@ -15,6 +15,7 @@ type Counts = Partial<Record<Stance, number>>;
 
 type Ledger = {
   subjectId: string;
+  kind?: Kind;
   date: string;
   stance: Stance;
   prev: PreviousStance | null;
@@ -79,10 +80,12 @@ export async function rollupOnce(): Promise<{ processed: number; skipped?: "busy
   const cohorts = new Map<string, { subjectId: string; date: string; counts: Counts }>();
   const daily = new Map<string, { subjectId: string; date: string; counts: Counts; excluded: number; byGame: Partial<Record<Game, number>> }>();
   const stats = new Map<string, { all: Counts; d7: Counts; d30: Counts }>();
+  const kinds = new Map<string, Kind>();
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
   for (const snapshot of changed.docs) {
     const event = ledger(snapshot);
+    kinds.set(event.subjectId, event.kind ?? "person");
     const dailyEntry = addNested(daily, `${event.subjectId}_${event.date}`, (): { subjectId: string; date: string; counts: Counts; excluded: number; byGame: Partial<Record<Game, number>> } => ({
       subjectId: event.subjectId, date: event.date, counts: {}, excluded: 0, byGame: {},
     }));
@@ -122,7 +125,7 @@ export async function rollupOnce(): Promise<{ processed: number; skipped?: "busy
 
   const batch = db.batch();
   for (const entry of cohorts.values()) batch.set(db.doc(`subjectCohorts/${entry.subjectId}_${entry.date}`), {
-    subjectId: entry.subjectId, date: entry.date, ...incrementObject(entry.counts),
+    subjectId: entry.subjectId, date: entry.date, kind: kinds.get(entry.subjectId) ?? "person", ...incrementObject(entry.counts),
   }, { merge: true });
   for (const entry of daily.values()) batch.set(db.doc(`dailyStats/${entry.subjectId}_${entry.date}`), {
     subjectId: entry.subjectId,
@@ -137,7 +140,7 @@ export async function rollupOnce(): Promise<{ processed: number; skipped?: "busy
       windows: { d7: incrementObject(entry.d7), d30: incrementObject(entry.d30), all: incrementObject(entry.all) },
       computedAt: Timestamp.now(), schemaVersion: 2,
     }, { merge: true });
-    batch.set(db.doc("subjectStats/_index"), {
+    if (listedInIndex(kinds.get(subjectId))) batch.set(db.doc("subjectStats/_index"), {
       s: { [subjectId]: { d30: incrementObject(entry.d30) } }, computedAt: Timestamp.now(),
     }, { merge: true });
   }

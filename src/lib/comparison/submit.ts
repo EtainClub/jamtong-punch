@@ -1,5 +1,5 @@
 import { Timestamp } from "firebase-admin/firestore";
-import { requirePublishedBracket, requirePublishedRecord, requirePublishedSubjects } from "@/lib/content/store";
+import { requirePublishedBracket, requirePublishedStatement } from "@/lib/content/store";
 import { db } from "@/lib/firebase/admin";
 import type { ComparisonInput } from "@/lib/comparison/schema";
 
@@ -14,11 +14,8 @@ function expectedMatch(state: string[], round: number): ExpectedMatch[] {
 
 async function validateBracket(input: ComparisonInput) {
   const bracket = await requirePublishedBracket(input.bracket);
-  for (const item of bracket.items) {
-    if (item.type === "record") await requirePublishedRecord(item.id);
-    else await requirePublishedSubjects([{ kind: "policy", slug: item.id }]);
-  }
-  let contenders = bracket.items.map((item) => item.id);
+  for (const id of bracket.statementIds) await requirePublishedStatement(id);
+  let contenders = [...bracket.statementIds];
   let cursor = 0;
   let round = 1;
   while (contenders.length > 1) {

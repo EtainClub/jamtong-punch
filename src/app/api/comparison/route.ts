@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     if (!parsed.success) throw new Refusal(400, "invalid-body");
     return Response.json(await submitComparison(uid, parsed.data));
   } catch (error) {
-    if (error instanceof Error && /bracket/.test(error.message)) return refusalResponse(new Refusal(400, "invalid-comparison"));
+    if (error instanceof Error && /bracket|unknown or unpublished/.test(error.message)) return refusalResponse(new Refusal(400, "invalid-comparison"));
     return refusalResponse(error);
   }
 }

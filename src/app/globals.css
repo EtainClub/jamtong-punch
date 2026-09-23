@@ -10,6 +10,8 @@
   --navy-tint: #e3e9f4;
   --burgundy: #8a2233;
   --burgundy-tint: #f6e6e8;
+  --pending: #8a6a12;
+  --pending-tint: #f6f0df;
   --radius-card: 20px;
   --radius-pill: 9999px;
 }
@@ -30,3 +32,5 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+a { color: inherit; }

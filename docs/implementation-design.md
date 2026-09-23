@@ -5,6 +5,7 @@
 - 기준 프로젝트: `/Users/etain/devel-src/jamtong` (플랫폼·디자인), `~/devel-src/punchpol` (게임)
 - 작성일: 2026-09-20
 - 백엔드 상세: [`firebase-backend.md`](./firebase-backend.md) — 8·9·10·12·13장을 구현 수준으로 푼 문서
+- **rev. 5 (2026-09-23):** 제품의 중심이 인물 아카이브(기록·시선·관계)로 바뀌었다 — [`people-archive-design.md`](./people-archive-design.md). 이 문서의 1·5·6·8장은 그 문서가 대체하고, 게임·원장·집계 장은 인물 대상으로 좁혀 유효하다
 
 ## 0. 개정 이력
 

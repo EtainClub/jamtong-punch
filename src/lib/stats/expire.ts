@@ -1,6 +1,7 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { kstDate, shiftDate } from "@/lib/date/kst";
 import { db } from "@/lib/firebase/admin";
+import { listedInIndex, type Kind } from "@/lib/domain";
 import { invalidateStats } from "@/lib/stats/read";
 
 const CHUNK_SIZE = 450;
@@ -14,7 +15,7 @@ export async function expireWindows(today = kstDate()): Promise<number> {
       const batch = db.batch();
       const changed: string[] = [];
       for (const cohort of cohorts.docs.slice(offset, offset + CHUNK_SIZE)) {
-        const data = cohort.data() as { subjectId: string; punch?: number; cheer?: number; unknown?: number };
+        const data = cohort.data() as { subjectId: string; kind?: Kind; punch?: number; cheer?: number; unknown?: number };
         batch.set(db.doc(`subjectStats/${data.subjectId}`), {
           windows: { [name]: {
             punch: FieldValue.increment(-(data.punch ?? 0)),
@@ -24,7 +25,7 @@ export async function expireWindows(today = kstDate()): Promise<number> {
           computedAt: Timestamp.now(),
           schemaVersion: 2,
         }, { merge: true });
-        batch.set(db.doc("subjectStats/_index"), {
+        if (listedInIndex(data.kind)) batch.set(db.doc("subjectStats/_index"), {
           s: { [data.subjectId]: { d30: {
             punch: FieldValue.increment(name === "d30" ? -(data.punch ?? 0) : 0),
             cheer: FieldValue.increment(name === "d30" ? -(data.cheer ?? 0) : 0),

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { db } from "../src/lib/firebase/admin";
+import { validateAllContent } from "../src/lib/content/store";
 
 const envFile = process.env.ENV_FILE ?? ".env.local";
 
@@ -56,25 +57,25 @@ if (deployedValue("CRON_AUDIENCE") !== expectedAudience) {
 }
 
 async function main() {
-  const [subjects, sources, records, brackets] = await Promise.all([
-    db.collection("contentSubjects").where("status", "==", "published").get(),
-    db.collection("contentSources").get(),
-    db.collection("contentRecords").where("status", "==", "published").get(),
-    db.collection("contentBrackets").where("status", "==", "published").get(),
+  const [people, sources, statements, contentErrors] = await Promise.all([
+    db.collection("people").where("status", "==", "published").get(),
+    db.collection("sources").get(),
+    db.collection("statements").where("status", "==", "published").get(),
+    validateAllContent(),
   ]);
+  missing.push(...contentErrors.map((error) => `invalid content: ${error}`));
   const bootstrap = process.env.CMS_BOOTSTRAP === "1";
   if (!bootstrap) {
-    if (subjects.empty) missing.push("published content (at least one cleared subject)");
+    if (people.empty) missing.push("published content (at least one person)");
     if (sources.empty) missing.push("published content sources");
-    if (records.empty) missing.push("published content records");
-    if (brackets.empty) missing.push("published content brackets");
+    if (statements.empty) missing.push("published content statements");
   }
   if (missing.length) {
     console.error(`Production preflight blocked (${envFile}):\n${missing.map((item) => `- ${item}`).join("\n")}`);
     process.exitCode = 1;
     return;
   }
-  console.log(`Production preflight passed${bootstrap ? " (CMS bootstrap; public content is intentionally empty)" : ""}: ${subjects.size} subjects, ${records.size} records, ${brackets.size} brackets.`);
+  console.log(`Production preflight passed${bootstrap ? " (CMS bootstrap; public content is intentionally empty)" : ""}: ${people.size} people, ${statements.size} statements.`);
 }
 
 void main();

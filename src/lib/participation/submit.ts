@@ -1,5 +1,5 @@
 import { Timestamp } from "firebase-admin/firestore";
-import { requirePublishedSubjects } from "@/lib/content/store";
+import { requirePublishedTargets } from "@/lib/content/store";
 import { kstDate } from "@/lib/date/kst";
 import { detectAnomaly } from "@/lib/guard/anomaly";
 import { db } from "@/lib/firebase/admin";
@@ -24,7 +24,7 @@ function trimStateMap(map: Record<string, StateEntry>): Record<string, StateEntr
 }
 
 export async function submitParticipation(uid: string, input: ParticipationInput): Promise<ParticipationResult> {
-  const subjects = await requirePublishedSubjects(input.stances);
+  const subjects = await requirePublishedTargets(input.stances);
   if (new Set(subjects.map((subject) => subject.id)).size !== subjects.length) throw new Error("duplicate-subject");
   if (input.game !== "swipe" && input.stances.length !== 1) throw new Error("invalid-game-size");
 

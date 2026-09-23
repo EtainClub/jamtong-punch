@@ -1,6 +1,6 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { cutoff, kstDate } from "@/lib/date/kst";
-import type { Stance } from "@/lib/domain";
+import { listedInIndex, type Kind, type Stance } from "@/lib/domain";
 import { db } from "@/lib/firebase/admin";
 import { invalidateStats } from "@/lib/stats/read";
 
@@ -59,14 +59,16 @@ export async function reconcileInvariants(today = kstDate()) {
   return { checked, queued, reads, budget: budget() };
 }
 
-type LedgerEntry = { subjectId: string; date: string; stance: Stance; excluded: boolean };
+type LedgerEntry = { subjectId: string; kind?: Kind; date: string; stance: Stance; excluded: boolean };
 
 /** Stage 2: rebuild one subject's cohorts and windows from the ledger source of truth. */
 export async function rebuildSubject(subjectId: string, today = kstDate()) {
   const ledger = await db.collectionGroup("stances").where("subjectId", "==", subjectId).get();
   const latestByUid = new Map<string, LedgerEntry>();
+  let kind: Kind | undefined;
   for (const snapshot of ledger.docs) {
     const entry = snapshot.data() as LedgerEntry;
+    kind ??= entry.kind;
     if (entry.excluded) continue;
     const uid = snapshot.ref.parent.parent?.id;
     if (!uid) throw new Error(`invalid stance path: ${snapshot.ref.path}`);
@@ -86,7 +88,7 @@ export async function rebuildSubject(subjectId: string, today = kstDate()) {
   const oldCohorts = await db.collection("subjectCohorts").where("subjectId", "==", subjectId).get();
   const writes: Array<(batch: FirebaseFirestore.WriteBatch) => void> = [];
   for (const cohort of oldCohorts.docs) writes.push((batch) => batch.delete(cohort.ref));
-  for (const [date, counts] of rebuilt) writes.push((batch) => batch.set(db.doc(`subjectCohorts/${subjectId}_${date}`), { subjectId, date, ...counts }));
+  for (const [date, counts] of rebuilt) writes.push((batch) => batch.set(db.doc(`subjectCohorts/${subjectId}_${date}`), { subjectId, date, kind: kind ?? "person", ...counts }));
   for (let offset = 0; offset < writes.length; offset += 450) {
     const batch = db.batch();
     for (const write of writes.slice(offset, offset + 450)) write(batch);
@@ -103,7 +105,7 @@ export async function rebuildSubject(subjectId: string, today = kstDate()) {
   }
   const batch = db.batch();
   batch.set(db.doc(`subjectStats/${subjectId}`), { windows: { d7, d30, all }, computedAt: Timestamp.now(), schemaVersion: 2 }, { merge: true });
-  batch.set(db.doc("subjectStats/_index"), { s: { [subjectId]: { d30 } }, computedAt: Timestamp.now() }, { merge: true });
+  if (listedInIndex(kind)) batch.set(db.doc("subjectStats/_index"), { s: { [subjectId]: { d30 } }, computedAt: Timestamp.now() }, { merge: true });
   batch.delete(queueRef(subjectId));
   await batch.commit();
   invalidateStats([subjectId]);

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { Timestamp } from "firebase-admin/firestore";
-import { requirePublishedRecord, requirePublishedSubjectId } from "@/lib/content/store";
+import { requirePublishedPerson, requirePublishedStatement } from "@/lib/content/store";
 import { db } from "@/lib/firebase/admin";
 import type { ReportInput } from "@/lib/report/schema";
 
@@ -9,10 +9,10 @@ function reportId(uid: string, input: ReportInput): string {
 }
 
 async function requireReportTarget(input: ReportInput) {
-  if (input.targetType === "record") return requirePublishedRecord(input.targetId);
-  const subject = await requirePublishedSubjectId(input.targetId);
-  if (input.targetType === "photo" && !subject.image) throw new Error(`unknown published photo: ${input.targetId}`);
-  return subject;
+  if (input.targetType === "statement") return requirePublishedStatement(input.targetId);
+  const person = await requirePublishedPerson(input.targetId);
+  if (input.targetType === "photo" && !person.image) throw new Error(`unknown published photo: ${input.targetId}`);
+  return person;
 }
 
 export async function submitReport(uid: string, input: ReportInput) {
