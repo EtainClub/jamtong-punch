@@ -76,7 +76,10 @@ const statement = (id: string, status: string) => ({
 
     // Publishing clears it; public records cannot be rejected.
     await saveContent("statements", "cb-s3", statement("cb-s3", "published"), ops);
-    expect((await db.doc("statements/cb-s3").get()).get("rejection")).toBeUndefined();
+    const published = await db.doc("statements/cb-s3").get();
+    expect(published.get("rejection")).toBeUndefined();
+    expect(published.get("firstPublishedAt")).toBeDefined();
+    expect((await db.doc("statements/cb-s1").get()).get("firstPublishedAt")).toBeDefined();
     expect(await refusal(rejectContent("statements", "cb-s3", "늦은 반려", ops))).toBe(409);
   });
 

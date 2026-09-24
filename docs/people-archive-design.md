@@ -218,7 +218,13 @@ type Citation = {
   - 언행: 같은 화자가 같은 출처 구간을 겹쳐 인용했거나 원문이 같다.
   - 시선: 같은 평가자와 대상이 같은 구간을 인용했다.
   - 기여자는 남의 미공개 기록을 볼 수 없어서, 중복은 운영자 검토에서 한 번 더 걸러진다.
-- **App Check:** 편집·프로필 API는 구글 계정이면 App Check 없이 받는다(`accountsSkipAppCheck`). ID 토큰이 이미 사람을 가리키고, Brave 같은 브라우저는 reCAPTCHA 점수가 낮아 403 뒤 SDK가 하루 동안 요청을 막기 때문이다. 익명 참여는 계속 App Check를 요구한다.
+- **App Check:** 편집·프로필 API는 구글 계정이면 App Check 없이 받는다(`accountsSkipAppCheck`). ID 토큰이 이미 사람을 가리키고, Brave 같은 브라우저는 reCAPTCHA 점수가 낮아 403 뒤 SDK가 하루 동안 요청을 막기 때문이다. 익명 참여는 계속 App Check를 요구하되, 통과 점수를 0.5에서 **0.3**으로 낮췄다(2026-09-24). 봇 차단은 원장의 속도 제한과 1인 1표 집계가 함께 맡는다.
+
+### 5.1e 공개와 공유 (2026-09-24)
+
+- `firstPublishedAt`(메타): 처음 공개된 시각. 보관 후 다시 공개해도 유지한다. 홈의 **"새로 올라온 기록"**은 이 순서로 정렬한다. 말한 시점(`occurredAt`) 순서는 인물·쟁점 화면이 맡는다. 출처의 `publishedAt`(게시일)과는 다른 필드다.
+- 언행·시선마다 공개 주소(`/statements/{id}`, `/evaluations/{id}`)가 있고, 카드 제목과 **공유** 버튼이 그 주소로 이어진다. 공유 링크는 접속한 호스트와 상관없이 항상 `NEXT_PUBLIC_SITE_URL`(im.jamtong.kr)을 쓴다.
+- 미리보기 이미지(`opengraph-image`)는 사이트, 인물, 언행, 시선마다 서버에서 그린다. 한글 글꼴은 Google Fonts에서 쓰인 글자만 TrueType 부분 집합으로 받는다. 인물 사진은 권리가 확인된 것만 넣는다.
 
 ### 5.2 `people/{personId}`
 
@@ -615,7 +621,9 @@ implementation-design 7장 그대로. 헤더 카드는 그 인물의 statement �
 /people/[slug]/play/[mode]      반사 게임 (playable만)
 /graph/[slug]                   관계도 전체 화면
 /events/[id]
+/statements/[id]  /evaluations/[id]   기록 한 건 (공유 링크, 전용 미리보기 이미지)
 /topics  /topics/[slug]
+/sitemap.xml  /robots.txt             공개 기록 전체. /api·/ops·/contribute는 제외
 /play/swipe  /play/worldcup/[bracket]
 /about
 /ops/content                    CMS

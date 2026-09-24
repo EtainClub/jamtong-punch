@@ -44,7 +44,7 @@ const schemas = {
   brackets: bracketSchema,
 } as const;
 
-const META_FIELDS = ["createdAt", "createdBy", "updatedAt", "updatedBy", "contributor", "rejection"];
+const META_FIELDS = ["createdAt", "createdBy", "updatedAt", "updatedBy", "contributor", "rejection", "firstPublishedAt"];
 // What signed-in contributors may submit. Events and brackets stay with operators.
 const CONTRIBUTABLE = new Set<ContentType>(["people", "statements", "evaluations", "sources", "topics"]);
 export const DERIVED_FIELDS: Record<ContentType, string[]> = {
@@ -557,6 +557,8 @@ export async function saveContent(type: ContentType, id: string, data: unknown, 
       ...(type === "sources" && current.get("availability") ? { availability: current.get("availability") } : {}),
       ...(contributor ? { contributor } : {}),
       ...(status !== "published" && current.get("rejection") ? { rejection: current.get("rejection") } : {}),
+      // When it first became public; the home page lists new records by it.
+      ...(current.get("firstPublishedAt") || status === "published" ? { firstPublishedAt: current.get("firstPublishedAt") ?? now } : {}),
       createdAt: current.get("createdAt") ?? now,
       createdBy: current.get("createdBy") ?? actor.uid,
       updatedAt: now,

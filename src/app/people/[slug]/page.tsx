@@ -1,3 +1,4 @@
+import { shareMetadata } from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -24,7 +25,7 @@ function single(value: string | string[] | undefined) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const person = await getPerson((await params).slug);
-  return person ? { title: person.name, description: `${person.name}의 언행, 다른 사람들의 평가, 발언으로 이어진 관계를 원자료와 함께 봅니다.` } : {};
+  return person ? shareMetadata(person.name, `${person.name}의 언행, 다른 사람들의 평가, 발언으로 이어진 관계를 원자료와 함께 봅니다.`) : {};
 }
 
 export default async function PersonPage({ params, searchParams }: Props) {

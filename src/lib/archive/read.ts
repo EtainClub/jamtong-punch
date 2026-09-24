@@ -103,13 +103,34 @@ export const topicEvents = unstable_cache(async (topicId: string) =>
   (await published("events").where("topicIds", "array-contains", topicId).orderBy("occurredAt", "desc").limit(50).get()).docs.map(event),
 ["archive", "topic-events"], CACHE);
 
-export const recentStatements = unstable_cache(async (limit: number) =>
-  (await published("statements").orderBy("occurredAt", "desc").limit(limit).get()).docs.map(statement),
-["archive", "recent-statements"], CACHE);
 
-export const recentEvaluations = unstable_cache(async (limit: number) =>
-  (await published("evaluations").orderBy("occurredAt", "desc").limit(limit).get()).docs.map(evaluation),
-["archive", "recent-evaluations"], CACHE);
+export type RecentItem =
+  | { kind: "statement"; publishedAt: string; value: StatementView }
+  | { kind: "evaluation"; publishedAt: string; value: EvaluationView };
+
+// Newest publications first, which is what shows the archive growing (the
+// sections above order by when things were said). Ordered on firstPublishedAt
+// alone, so no composite index; records archived later keep the field and are
+// filtered out here.
+export const recentlyPublished = unstable_cache(async (limit: number): Promise<RecentItem[]> => {
+  const [statements, evaluations] = await Promise.all(["statements", "evaluations"].map((name) => db.collection(name).orderBy("firstPublishedAt", "desc").limit(limit * 2).get()));
+  const at = (snapshot: Snapshot) => (snapshot.get("firstPublishedAt") as FirebaseFirestore.Timestamp).toDate().toISOString();
+  const isPublic = (snapshot: Snapshot) => snapshot.get("status") === "published";
+  return [
+    ...statements.docs.filter(isPublic).map((snapshot): RecentItem => ({ kind: "statement", publishedAt: at(snapshot), value: statement(snapshot) })),
+    ...evaluations.docs.filter(isPublic).map((snapshot): RecentItem => ({ kind: "evaluation", publishedAt: at(snapshot), value: evaluation(snapshot) })),
+  ].sort((left, right) => right.publishedAt.localeCompare(left.publishedAt)).slice(0, limit);
+}, ["archive", "recently-published"], CACHE);
+
+// Every public page's id and last change, for the sitemap.
+export const publishedIndex = unstable_cache(async () => {
+  const names = ["people", "statements", "evaluations", "events", "topics"] as const;
+  const results = await Promise.all(names.map((name) => published(name).select("updatedAt").get()));
+  return Object.fromEntries(names.map((name, index) => [name, results[index].docs.map((snapshot) => ({
+    id: snapshot.id,
+    updatedAt: (snapshot.get("updatedAt") as FirebaseFirestore.Timestamp | undefined)?.toDate().toISOString() ?? null,
+  }))])) as Record<(typeof names)[number], Array<{ id: string; updatedAt: string | null }>>;
+}, ["archive", "published-index"], CACHE);
 
 // Sources are looked up in one batch per page and returned as a plain object
 // (the cache serializes results as JSON, so a Map would not survive).

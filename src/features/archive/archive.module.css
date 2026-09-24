@@ -192,3 +192,7 @@
 .account button:disabled { opacity: .5; }
 .contributor { color: var(--smoke); font-size: 12px; }
 .badge { display: inline-block; min-width: 18px; margin-left: 4px; border-radius: 999px; background: var(--burgundy); padding: 1px 5px; color: white; font-size: 11px; font-weight: 800; line-height: 16px; text-align: center; }
+.headline a, .claim a { color: inherit; text-decoration: none; }
+.headline a:hover, .claim a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.shareButton { border: 1px solid var(--stone); border-radius: var(--radius-pill); background: white; padding: 3px 10px; color: var(--graphite); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.published { margin: 0 0 6px; color: var(--smoke); font-size: 12px; }

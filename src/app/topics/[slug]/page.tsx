@@ -1,3 +1,4 @@
+import { shareMetadata } from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,7 +16,7 @@ type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<s
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const topic = (await listTopics()).find((item) => item.id === slug);
-  return topic ? { title: `#${topic.name}`, description: topic.description } : {};
+  return topic ? shareMetadata(`#${topic.name}`, topic.description) : {};
 }
 
 export default async function TopicPage({ params, searchParams }: Props) {

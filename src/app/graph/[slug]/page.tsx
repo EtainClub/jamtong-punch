@@ -1,3 +1,4 @@
+import { shareMetadata } from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,7 +13,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const person = await getPerson((await params).slug);
-  return person ? { title: `${person.name}의 관계도`, description: `${person.name}이 언급하거나 평가한 사람, ${person.name}을 언급하거나 평가한 사람.` } : {};
+  return person ? shareMetadata(`${person.name}의 관계도`, `${person.name}이 언급하거나 평가한 사람, ${person.name}을 언급하거나 평가한 사람.`) : {};
 }
 
 // Stays inside the graph as the reader moves from person to person, so the

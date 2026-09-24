@@ -6,6 +6,7 @@ import { citationHref, citationLabel, evaluationFormatLabels, formatDate, format
 import type { Stance } from "@/lib/domain";
 import { present } from "@/lib/stats/present";
 import { AccountMenu } from "./AccountMenu";
+import { ShareButton } from "./ShareButton";
 import { StanceButtons } from "./StanceButtons";
 import { VideoEmbed } from "./VideoEmbed";
 import styles from "./archive.module.css";
@@ -110,7 +111,7 @@ export function StatementCard({ statement, sources, names, topics, showSpeaker =
       <AssertionBadge type={statement.assertionType} />
       {statement.quote && <SpeakerBadge verified={statement.speakerVerified} />}
     </p>
-    <h3 className={styles.headline}>{statement.headline}</h3>
+    <h3 className={styles.headline}><Link href={`/statements/${statement.id}`}>{statement.headline}</Link></h3>
     {statement.quote && <blockquote className={styles.quote}>“{statement.quote}”</blockquote>}
     <CitedVideo citations={statement.citations} sources={sources} title={statement.headline} />
     <CitationLinks citations={statement.citations} sources={sources} />
@@ -121,6 +122,7 @@ export function StatementCard({ statement, sources, names, topics, showSpeaker =
       {mentioned.map((id) => <Link key={id} href={`/people/${id}`}>언급: {names[id]}</Link>)}
       {statement.contributor && <span className={styles.contributor}>등록: {statement.contributor}</span>}
       <Link className={styles.verifyLink} href={`/verify/statement/${statement.id}`}>⛓ 블록체인 대조</Link>
+      <ShareButton path={`/statements/${statement.id}`} title={statement.headline} />
     </div>
     {statement.corrections.length > 0 && <details className={styles.context}><summary>정정 {statement.corrections.length}건</summary>{statement.corrections.map((item, index) => <p key={index}>{formatShortDate(item.at)} {item.note}</p>)}</details>}
     {stats && <Reaction id={statement.id} counts={stats[statement.id]} />}
@@ -162,7 +164,7 @@ export function EvaluationCard({ evaluation, sources, names, topics, responses =
     <p className={styles.evaluator}>{evaluatorName}<span>{evaluation.evaluator.descriptor}</span>{showTarget && names[evaluation.targetPersonId] && <span>→ <Link href={`/people/${evaluation.targetPersonId}?tab=views`}>{names[evaluation.targetPersonId]}</Link></span>}</p>
     <p className={styles.meta}><time dateTime={evaluation.occurredAt}>{formatShortDate(evaluation.occurredAt, evaluation.datePrecision, evaluation.dateCertainty)}</time><span>· {evaluationFormatLabels[evaluation.format]}</span><SpeakerBadge verified={evaluation.speakerVerified} /></p>
     <CitedVideo citations={[evaluation.citation]} sources={sources} title={`${evaluation.evaluator.name}의 평가 영상`} />
-    <p className={styles.claim}>{evaluation.claim}</p>
+    <p className={styles.claim}><Link href={`/evaluations/${evaluation.id}`}>{evaluation.claim}</Link></p>
     {evaluation.quote && <blockquote className={styles.quote}>“{evaluation.quote}”</blockquote>}
     <CitationLinks citations={[evaluation.citation]} sources={sources} />
     <Transcripts citations={[evaluation.citation]} sources={sources} />
@@ -172,6 +174,7 @@ export function EvaluationCard({ evaluation, sources, names, topics, responses =
       {responses.length > 0 && <span>↳ 이 평가에 대한 반론 {responses.length}: {responses.map((item) => item.evaluator.name).join(", ")}</span>}
       {evaluation.contributor && <span className={styles.contributor}>등록: {evaluation.contributor}</span>}
       <Link className={styles.verifyLink} href={`/verify/evaluation/${evaluation.id}`}>⛓ 블록체인 대조</Link>
+      <ShareButton path={`/evaluations/${evaluation.id}`} title={evaluation.claim} />
     </div>
   </article>;
 }

@@ -1,3 +1,4 @@
+import { shareMetadata } from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -24,7 +25,7 @@ async function load(slug: string, other: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, other } = await params;
   const pair = await load(slug, other);
-  return pair ? { title: `${pair.left.name} ↔ ${pair.right.name}`, description: `${pair.left.name}와 ${pair.right.name}가 서로를 언급하거나 평가한 공개 발언 ${pair.relationship.weight}건.` } : {};
+  return pair ? shareMetadata(`${pair.left.name} ↔ ${pair.right.name}`, `${pair.left.name}와 ${pair.right.name}가 서로를 언급하거나 평가한 공개 발언 ${pair.relationship.weight}건.`) : {};
 }
 
 export default async function PairPage({ params, searchParams }: Props) {
