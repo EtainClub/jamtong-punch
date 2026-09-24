@@ -2,10 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Citation, Evaluation, Person } from "@/content/schema";
 import type { SourceView, StatementView } from "@/lib/archive/read";
-import { citationHref, citationLabel, evaluationFormatLabels, formatDate, formatShortDate, formatTimecode, statementKindLabels, youtubeThumbnail } from "@/lib/content/format";
+import { citationHref, citationLabel, evaluationFormatLabels, formatDate, formatShortDate, formatTimecode, statementKindLabels } from "@/lib/content/format";
 import type { Stance } from "@/lib/domain";
 import { present } from "@/lib/stats/present";
 import { StanceButtons } from "./StanceButtons";
+import { VideoEmbed } from "./VideoEmbed";
 import styles from "./archive.module.css";
 
 export type Names = Record<string, string>;
@@ -68,6 +69,18 @@ export function Transcripts({ citations, sources }: { citations: Citation[]; sou
   })}</>;
 }
 
+// Plays the cited segment inside 임통. Only a video that is still reachable
+// is offered; a deleted or private one falls back to the kept transcript.
+function CitedVideo({ citations, sources, title }: { citations: Citation[]; sources: Sources; title: string }) {
+  const playable = citations.find((citation) => {
+    const source = sources[citation.sourceId];
+    return source?.video && !isGone(source);
+  });
+  if (!playable) return null;
+  const source = sources[playable.sourceId];
+  return <VideoEmbed videoId={source.video!.videoId} startSec={playable.startSec} endSec={playable.endSec} vertical={/\/shorts\//.test(source.url)} title={title} />;
+}
+
 function AssertionBadge({ type }: { type: string }) {
   // "pending" colour marks claims and interpretations: not verified, not wrong.
   if (type === "FACT") return null;
@@ -89,6 +102,7 @@ export function StatementCard({ statement, sources, names, topics, showSpeaker =
     </p>
     <h3 className={styles.headline}>{statement.headline}</h3>
     {statement.quote && <blockquote className={styles.quote}>“{statement.quote}”</blockquote>}
+    <CitedVideo citations={statement.citations} sources={sources} title={statement.headline} />
     <CitationLinks citations={statement.citations} sources={sources} />
     <Transcripts citations={statement.citations} sources={sources} />
     <details className={styles.context}><summary>맥락</summary><p>{statement.context}</p></details>
@@ -130,21 +144,16 @@ export function StatementTimeline({ statements, ...props }: { statements: Statem
 export function EvaluationCard({ evaluation, sources, names, topics, responses = [], showTarget = false }: {
   evaluation: Evaluation; sources: Sources; names: Names; topics: Names; responses?: Evaluation[]; showTarget?: boolean;
 }) {
-  const source = sources[evaluation.citation.sourceId];
-  // A dead video has no thumbnail to show; the kept transcript stands in.
-  const thumbnail = source && !isGone(source) ? youtubeThumbnail(source) : null;
   const evaluatorName = evaluation.evaluator.personId && names[evaluation.evaluator.personId]
     ? <Link href={`/people/${evaluation.evaluator.personId}`}>{evaluation.evaluator.name}</Link>
     : evaluation.evaluator.name;
   return <article className={styles.viewCard}>
     <p className={styles.evaluator}>{evaluatorName}<span>{evaluation.evaluator.descriptor}</span>{showTarget && names[evaluation.targetPersonId] && <span>→ <Link href={`/people/${evaluation.targetPersonId}?tab=views`}>{names[evaluation.targetPersonId]}</Link></span>}</p>
     <p className={styles.meta}><time dateTime={evaluation.occurredAt}>{formatShortDate(evaluation.occurredAt, evaluation.datePrecision)}</time><span>· {evaluationFormatLabels[evaluation.format]}</span></p>
-    {thumbnail && source && <a className={styles.thumb} href={citationHref(evaluation.citation, source)} target="_blank" rel="noreferrer">
-      <Image src={thumbnail} alt="" width={120} height={68} unoptimized />{citationLabel(evaluation.citation, source)}
-    </a>}
+    <CitedVideo citations={[evaluation.citation]} sources={sources} title={`${evaluation.evaluator.name}의 평가 영상`} />
     <p className={styles.claim}>{evaluation.claim}</p>
     {evaluation.quote && <blockquote className={styles.quote}>“{evaluation.quote}”</blockquote>}
-    {!thumbnail && <CitationLinks citations={[evaluation.citation]} sources={sources} />}
+    <CitationLinks citations={[evaluation.citation]} sources={sources} />
     <Transcripts citations={[evaluation.citation]} sources={sources} />
     <div className={styles.links}>
       {evaluation.topicIds.filter((id) => topics[id]).map((id) => <Link key={id} className={styles.tag} href={`/topics/${id}`}>#{topics[id]}</Link>)}
