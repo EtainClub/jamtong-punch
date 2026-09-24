@@ -58,7 +58,7 @@
 | Storage 버킷 | 기본 버킷 + `public` 접두 경로 | |
 | 결제 | Blaze | App Hosting·Scheduler에 필요 |
 
-> 운영 배포 기준 URL은 `https://jamtong-punch--jamtong-punch.asia-east1.hosted.app`이다. 커스텀 도메인을 연결하면 reCAPTCHA Enterprise 허용 도메인, `NEXT_PUBLIC_SITE_URL`, `CRON_AUDIENCE`를 함께 교체한 뒤 사전검증을 다시 통과시킨다.
+> 운영 주소는 `https://im.jamtong.kr`이다. 기본 App Hosting 주소(`https://jamtong-punch--jamtong-punch.asia-east1.hosted.app`)도 계속 열려 있어 `EXTRA_ALLOWED_ORIGINS`에 남기고, Cloud Scheduler와 `CRON_AUDIENCE`는 그 주소를 그대로 쓴다. 도메인을 추가할 때는 Firebase Auth 허용 도메인, reCAPTCHA Enterprise 허용 도메인, `EXTRA_ALLOWED_ORIGINS`를 함께 갱신한다.
 
 환경은 셋이다.
 
