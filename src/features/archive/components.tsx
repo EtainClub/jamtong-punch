@@ -15,7 +15,7 @@ export type Sources = Record<string, SourceView>;
 
 export function SiteHeader({ current }: { current?: "people" | "topics" }) {
   return <header className={styles.siteHeader}><nav aria-label="주요 메뉴">
-    <Link className={styles.brand} href="/">임통</Link>
+    <Link className={styles.brand} href="/"><Image src="/brand/logo.png" alt="임통" width={100} height={40} priority /></Link>
     <Link href="/people" aria-current={current === "people" ? "page" : undefined}>인물</Link>
     <Link href="/topics" aria-current={current === "topics" ? "page" : undefined}>쟁점</Link>
     <AccountMenu />

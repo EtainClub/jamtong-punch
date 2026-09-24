@@ -1,10 +1,17 @@
 .shell { max-width: 592px; margin: 0 auto; padding: 0 16px 80px; }
 .wideShell { max-width: 1120px; margin: 0 auto; padding: 0 16px 80px; }
 .siteHeader { position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--stone); background: color-mix(in srgb, var(--eggshell) 92%, transparent); backdrop-filter: blur(8px); }
-.siteHeader nav { display: flex; align-items: center; gap: 18px; max-width: 1120px; margin: 0 auto; padding: 12px 16px; }
-.brand { margin-right: auto; color: var(--ink); font-size: 18px; font-weight: 800; letter-spacing: -.04em; text-decoration: none; }
+.siteHeader nav { display: flex; align-items: center; gap: 18px; min-height: 52px; max-width: 1120px; margin: 0 auto; padding: 6px 16px; }
+.brand { display: inline-flex; align-items: center; flex: 0 0 auto; margin-right: auto; text-decoration: none; }
+.brand img { display: block; width: 100px; height: 40px; }
 .siteHeader nav a:not(.brand) { color: var(--graphite); font-size: 14px; font-weight: 650; text-decoration: none; }
 .siteHeader nav a[aria-current="page"] { color: var(--ink); text-decoration: underline; text-underline-offset: 6px; }
+@media (max-width: 480px) {
+  .siteHeader nav { gap: 10px; padding: 6px 10px; }
+  .brand img { width: 78px; height: auto; }
+  .account { gap: 7px; }
+  .account button { padding: 6px 8px; }
+}
 
 .hero { padding: 40px 0 28px; }
 .eyebrow { margin: 0 0 10px; color: var(--navy); font-size: 12px; font-weight: 800; letter-spacing: .12em; }
