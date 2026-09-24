@@ -29,7 +29,7 @@ export type ContentValue = ContentMap[ContentType];
 type Derived = ContentValue & { mentionedPersonIds?: string[] };
 
 export class ContentError extends Error {
-  constructor(public readonly status: 400 | 409, message: string) {
+  constructor(public readonly status: 400 | 403 | 409 | 429, message: string) {
     super(message);
   }
 }
@@ -44,7 +44,7 @@ const schemas = {
   brackets: bracketSchema,
 } as const;
 
-const META_FIELDS = ["createdAt", "createdBy", "updatedAt", "updatedBy"];
+const META_FIELDS = ["createdAt", "createdBy", "updatedAt", "updatedBy", "contributor"];
 export const DERIVED_FIELDS: Record<ContentType, string[]> = {
   people: ["counts", "searchTokens", "sourceIds"],
   sources: ["availability"],
@@ -82,6 +82,18 @@ export function authored<T extends ContentType>(type: T, data: FirebaseFirestore
 export async function listContent<T extends ContentType>(type: T): Promise<ContentMap[T][]> {
   const snapshots = await collection(type).get();
   return snapshots.docs.map((snapshot) => authored(type, snapshot.data())).sort((left, right) => left.id.localeCompare(right.id));
+}
+
+// What the content editor lists for a caller. Operators see everything;
+// contributors see what is public (to reference it) plus their own work.
+export async function listContentFor<T extends ContentType>(type: T, caller: { uid: string; isOps: boolean }): Promise<ContentMap[T][]> {
+  if (caller.isOps || type === "sources") return listContent(type);
+  const [published, own] = await Promise.all([
+    collection(type).where("status", "==", "published").get(),
+    collection(type).where("createdBy", "==", caller.uid).get(),
+  ]);
+  const byId = new Map([...published.docs, ...own.docs].map((snapshot) => [snapshot.id, authored(type, snapshot.data())]));
+  return [...byId.values()].sort((left, right) => left.id.localeCompare(right.id));
 }
 
 export async function getContent<T extends ContentType>(type: T, id: string): Promise<ContentMap[T] | null> {
@@ -445,9 +457,47 @@ async function readStored(type: ContentType, id: string): Promise<Derived | null
   return { ...authored(type, snapshot.data()!), ...(type === "statements" ? { mentionedPersonIds: (snapshot.get("mentionedPersonIds") ?? []) as string[] } : {}) };
 }
 
-export async function saveContent(type: ContentType, id: string, data: unknown, actorUid: string) {
+// Who is writing. A plain uid means an operator (server scripts, tests, the
+// ops API); contributors are signed-in users whose writes are restricted.
+export type Actor = { uid: string; isOps: boolean; nickname?: string | null };
+
+const CONTRIBUTABLE = new Set<ContentType>(["people", "statements", "evaluations", "sources", "topics"]);
+const CONTRIBUTOR_STATUSES = new Set(["draft", "review"]);
+
+function toActor(actor: string | Actor): Actor {
+  return typeof actor === "string" ? { uid: actor, isOps: true } : actor;
+}
+
+function assertContributorType(type: ContentType) {
+  if (!CONTRIBUTABLE.has(type)) throw new ContentError(403, `contributors cannot edit ${type}`);
+}
+
+// Contributors submit; operators publish. Publishing puts a hash on chain for
+// good, so nothing reaches the public or the chain without an operator.
+function assertContributorValue(type: ContentType, value: ContentValue) {
+  assertContributorType(type);
+  const status = (value as { status?: string }).status;
+  if (status !== undefined && !CONTRIBUTOR_STATUSES.has(status)) throw new ContentError(403, "contributors can only save drafts or submit for review");
+  if (type === "people" && ((value as Person).image || (value as Person).playable)) throw new ContentError(403, "only operators add photos or make a person playable");
+}
+
+function assertContributorOwns(current: FirebaseFirestore.DocumentSnapshot, actor: Actor) {
+  if (actor.isOps || !current.exists) return;
+  if (current.get("createdBy") !== actor.uid) throw new ContentError(403, "contributors can only edit their own submissions");
+  const status = current.get("status");
+  if (status !== undefined && !CONTRIBUTOR_STATUSES.has(status)) throw new ContentError(403, "only operators can change published or archived content");
+}
+
+export async function saveContent(type: ContentType, id: string, data: unknown, actorOrUid: string | Actor) {
+  const actor = toActor(actorOrUid);
+  if (!actor.isOps) assertContributorType(type);
   const value = parse(type, data);
   if (value.id !== id) throw new ContentError(400, "content id mismatch");
+  if (!actor.isOps) {
+    assertContributorValue(type, value);
+    // Checked again inside the write transaction; this gives the clear refusal first.
+    assertContributorOwns(await collection(type).doc(id).get(), actor);
+  }
   await validate(type, value);
   const before = await readStored(type, id);
   const status = (value as { status?: string }).status;
@@ -455,21 +505,32 @@ export async function saveContent(type: ContentType, id: string, data: unknown, 
     const published = (await dependentsOf(type, id)).filter((item) => item.status === "published");
     if (published.length) throw new ContentError(409, `published content still references it: ${describe(published)}`);
   }
+  if (!actor.isOps && type === "sources" && before) {
+    // A source's url is part of every citing record's hash: once public
+    // content cites it, only an operator may change it.
+    const published = (await dependentsOf(type, id)).filter((item) => item.status === "published");
+    if (published.length) throw new ContentError(409, `published content cites this source: ${describe(published)}`);
+  }
   const derived = await derivedFields(type, value);
   const ref = collection(type).doc(id);
   await db.runTransaction(async (transaction) => {
     const current = await transaction.get(ref);
+    assertContributorOwns(current, actor);
     const now = Timestamp.now();
+    // The contributor who first submitted it stays credited through later
+    // operator edits and approval.
+    const contributor = current.get("contributor") ?? (actor.isOps ? null : { uid: actor.uid, nickname: actor.nickname ?? "이름 없음" });
     transaction.set(ref, {
       ...value,
       ...derived,
       ...(type === "people" ? { counts: current.get("counts") ?? EMPTY_PERSON_COUNTS } : {}),
       ...(type === "topics" ? { counts: current.get("counts") ?? EMPTY_TOPIC_COUNTS } : {}),
       ...(type === "sources" && current.get("availability") ? { availability: current.get("availability") } : {}),
+      ...(contributor ? { contributor } : {}),
       createdAt: current.get("createdAt") ?? now,
-      createdBy: current.get("createdBy") ?? actorUid,
+      createdBy: current.get("createdBy") ?? actor.uid,
       updatedAt: now,
-      updatedBy: actorUid,
+      updatedBy: actor.uid,
     });
   });
   await refreshDerived(type, before, { ...value, ...derived } as Derived);
@@ -477,9 +538,14 @@ export async function saveContent(type: ContentType, id: string, data: unknown, 
   return value;
 }
 
-export async function deleteContent(type: ContentType, id: string) {
+export async function deleteContent(type: ContentType, id: string, actorOrUid: string | Actor = { uid: "system", isOps: true }) {
+  const actor = toActor(actorOrUid);
   const before = await readStored(type, id);
   if (!before) return false;
+  if (!actor.isOps) {
+    assertContributorType(type);
+    assertContributorOwns(await collection(type).doc(id).get(), actor);
+  }
   const dependents = await dependentsOf(type, id);
   if (dependents.length) throw new ContentError(409, `content is used by ${describe(dependents)}`);
   await collection(type).doc(id).delete();

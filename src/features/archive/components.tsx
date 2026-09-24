@@ -1,10 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Citation, Evaluation, Person } from "@/content/schema";
-import type { SourceView, StatementView } from "@/lib/archive/read";
+import type { Credited, SourceView, StatementView } from "@/lib/archive/read";
 import { citationHref, citationLabel, evaluationFormatLabels, formatDate, formatShortDate, formatTimecode, statementKindLabels } from "@/lib/content/format";
 import type { Stance } from "@/lib/domain";
 import { present } from "@/lib/stats/present";
+import { AccountMenu } from "./AccountMenu";
 import { StanceButtons } from "./StanceButtons";
 import { VideoEmbed } from "./VideoEmbed";
 import styles from "./archive.module.css";
@@ -17,6 +18,7 @@ export function SiteHeader({ current }: { current?: "people" | "topics" }) {
     <Link className={styles.brand} href="/">임통</Link>
     <Link href="/people" aria-current={current === "people" ? "page" : undefined}>인물</Link>
     <Link href="/topics" aria-current={current === "topics" ? "page" : undefined}>쟁점</Link>
+    <AccountMenu />
   </nav></header>;
 }
 
@@ -117,6 +119,7 @@ export function StatementCard({ statement, sources, names, topics, showSpeaker =
     <div className={styles.links}>
       {statement.topicIds.filter((id) => topics[id]).map((id) => <Link key={id} className={styles.tag} href={compareHref ? compareHref(id) : `/topics/${id}`}>#{topics[id]}{compareHref ? " · 같은 주제 발언" : ""}</Link>)}
       {mentioned.map((id) => <Link key={id} href={`/people/${id}`}>언급: {names[id]}</Link>)}
+      {statement.contributor && <span className={styles.contributor}>등록: {statement.contributor}</span>}
       <Link className={styles.verifyLink} href={`/verify/statement/${statement.id}`}>⛓ 블록체인 대조</Link>
     </div>
     {statement.corrections.length > 0 && <details className={styles.context}><summary>정정 {statement.corrections.length}건</summary>{statement.corrections.map((item, index) => <p key={index}>{formatShortDate(item.at)} {item.note}</p>)}</details>}
@@ -150,7 +153,7 @@ export function StatementTimeline({ statements, ...props }: { statements: Statem
 }
 
 export function EvaluationCard({ evaluation, sources, names, topics, responses = [], showTarget = false }: {
-  evaluation: Evaluation; sources: Sources; names: Names; topics: Names; responses?: Evaluation[]; showTarget?: boolean;
+  evaluation: Evaluation & Credited; sources: Sources; names: Names; topics: Names; responses?: Evaluation[]; showTarget?: boolean;
 }) {
   const evaluatorName = evaluation.evaluator.personId && names[evaluation.evaluator.personId]
     ? <Link href={`/people/${evaluation.evaluator.personId}`}>{evaluation.evaluator.name}</Link>
@@ -167,6 +170,7 @@ export function EvaluationCard({ evaluation, sources, names, topics, responses =
       {evaluation.topicIds.filter((id) => topics[id]).map((id) => <Link key={id} className={styles.tag} href={`/topics/${id}`}>#{topics[id]}</Link>)}
       {evaluation.eventIds.map((id) => <Link key={id} href={`/events/${id}`}>관련 사건</Link>)}
       {responses.length > 0 && <span>↳ 이 평가에 대한 반론 {responses.length}: {responses.map((item) => item.evaluator.name).join(", ")}</span>}
+      {evaluation.contributor && <span className={styles.contributor}>등록: {evaluation.contributor}</span>}
       <Link className={styles.verifyLink} href={`/verify/evaluation/${evaluation.id}`}>⛓ 블록체인 대조</Link>
     </div>
   </article>;

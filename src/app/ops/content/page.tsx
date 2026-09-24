@@ -1,5 +1,5 @@
 import { OpsContentManager } from "@/features/ops/OpsContentManager";
 
 export default function OpsContentPage() {
-  return <OpsContentManager />;
+  return <OpsContentManager mode="ops" />;
 }

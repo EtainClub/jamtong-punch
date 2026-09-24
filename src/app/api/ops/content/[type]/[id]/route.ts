@@ -4,6 +4,8 @@ import { anchorPending } from "@/lib/anchor/run";
 import { CONTENT_TAG } from "@/lib/archive/read";
 import { refreshSourceAvailability } from "@/lib/content/check-sources";
 import { ContentError, contentTypeSchema, deleteContent, saveContent } from "@/lib/content/store";
+import { consumeContribution } from "@/lib/contributors/profile";
+import { editorActor } from "@/lib/guard/editor";
 import { verifyCaller } from "@/lib/guard/identity";
 import { checkOrigin } from "@/lib/guard/origin";
 import { Refusal, refusalResponse } from "@/lib/guard/refusal";
@@ -14,16 +16,15 @@ type Context = { params: Promise<{ type: string; id: string }> };
 
 async function target(req: Request, { params }: Context) {
   checkOrigin(req);
-  const caller = await verifyCaller(req);
-  if (!caller.isOps) throw new Refusal(403, "ops-required");
+  const actor = await editorActor(await verifyCaller(req));
   const { type: rawType, id } = await params;
   const type = contentTypeSchema.safeParse(rawType);
   if (!type.success || !/^[a-z0-9-]+$/.test(id)) throw new Refusal(400, "invalid-content-target");
-  return { caller, type: type.data, id };
+  return { actor, type: type.data, id };
 }
 
-// Content validation messages are written for operators and name the failing
-// field, so they are returned as the client code instead of a generic refusal.
+// Content validation messages name the failing field, so they are returned
+// as the client code instead of a generic refusal.
 function contentRefusal(error: unknown) {
   if (error instanceof ContentError) return refusalResponse(new Refusal(error.status, error.message, error.message));
   return refusalResponse(error);
@@ -31,9 +32,10 @@ function contentRefusal(error: unknown) {
 
 export async function PUT(req: Request, context: Context) {
   try {
-    const { caller, type, id } = await target(req, context);
+    const { actor, type, id } = await target(req, context);
+    if (!actor.isOps && !(await consumeContribution(actor.uid))) throw new Refusal(429, "contribution-cap", "오늘 저장할 수 있는 횟수를 모두 썼습니다. 내일 다시 시도해 주세요.");
     const body = await req.json() as { data?: unknown };
-    const item = await saveContent(type, id, body.data, caller.uid);
+    const item = await saveContent(type, id, body.data, actor);
     // A new or edited source is checked right away so its status is never blank.
     if (type === "sources") await refreshSourceAvailability(id);
     expireContent();
@@ -46,8 +48,8 @@ export async function PUT(req: Request, context: Context) {
 
 export async function DELETE(req: Request, context: Context) {
   try {
-    const { type, id } = await target(req, context);
-    const deleted = await deleteContent(type, id);
+    const { actor, type, id } = await target(req, context);
+    const deleted = await deleteContent(type, id, actor);
     if (deleted) { expireContent(); anchorAfterResponse(type); }
     return deleted ? new Response(null, { status: 204 }) : new Response(null, { status: 404 });
   } catch (error) {

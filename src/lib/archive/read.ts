@@ -15,7 +15,10 @@ const CACHE = { tags: [CONTENT_TAG], revalidate: 60 };
 
 export type PersonCounts = { statements: number; evaluationsReceived: number; evaluationsGiven: number; relations: number };
 export type PersonView = Person & { counts: PersonCounts };
-export type StatementView = Statement & { mentionedPersonIds: string[] };
+// Nickname of the Google user who submitted the record, if not an operator.
+export type Credited = { contributor?: string | null };
+export type StatementView = Statement & Credited & { mentionedPersonIds: string[] };
+export type EvaluationView = Evaluation & Credited;
 export type TopicView = Topic & { counts: { statements: number; evaluations: number; events: number; people: number } };
 export type Page<T> = { items: T[]; hasMore: boolean };
 export type SourceView = Source & { availability: SourceAvailability | null };
@@ -24,8 +27,9 @@ const ZERO_PERSON_COUNTS: PersonCounts = { statements: 0, evaluationsReceived: 0
 
 type Snapshot = FirebaseFirestore.DocumentSnapshot;
 const person = (snapshot: Snapshot): PersonView => ({ ...authored("people", snapshot.data()!), counts: snapshot.get("counts") ?? ZERO_PERSON_COUNTS });
-const statement = (snapshot: Snapshot): StatementView => ({ ...authored("statements", snapshot.data()!), mentionedPersonIds: snapshot.get("mentionedPersonIds") ?? [] });
-const evaluation = (snapshot: Snapshot): Evaluation => authored("evaluations", snapshot.data()!);
+const credit = (snapshot: Snapshot): string | null => snapshot.get("contributor.nickname") ?? null;
+const statement = (snapshot: Snapshot): StatementView => ({ ...authored("statements", snapshot.data()!), mentionedPersonIds: snapshot.get("mentionedPersonIds") ?? [], contributor: credit(snapshot) });
+const evaluation = (snapshot: Snapshot): EvaluationView => ({ ...authored("evaluations", snapshot.data()!), contributor: credit(snapshot) });
 const event = (snapshot: Snapshot): Event => authored("events", snapshot.data()!);
 const topic = (snapshot: Snapshot): TopicView => ({ ...authored("topics", snapshot.data()!), counts: snapshot.get("counts") ?? { statements: 0, evaluations: 0, events: 0, people: 0 } });
 const published = (collection: string) => db.collection(collection).where("status", "==", "published");

@@ -1,16 +1,17 @@
 import { verifyCaller } from "@/lib/guard/identity";
+import { requireEditor } from "@/lib/guard/editor";
 import { Refusal, refusalResponse } from "@/lib/guard/refusal";
-import { contentTypeSchema, listContent } from "@/lib/content/store";
+import { contentTypeSchema, listContentFor } from "@/lib/content/store";
 
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   try {
     const caller = await verifyCaller(req);
-    if (!caller.isOps) throw new Refusal(403, "ops-required");
+    requireEditor(caller);
     const type = contentTypeSchema.safeParse(new URL(req.url).searchParams.get("type"));
     if (!type.success) throw new Refusal(400, "invalid-content-type");
-    return Response.json({ items: await listContent(type.data) });
+    return Response.json({ items: await listContentFor(type.data, caller), role: caller.isOps ? "ops" : "contributor" });
   } catch (error) {
     return refusalResponse(error);
   }

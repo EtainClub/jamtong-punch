@@ -180,3 +180,7 @@
 .videoPoster { position: absolute; inset: 0; display: grid; place-items: center; width: 100%; border: 0; background-color: var(--ink); background-position: center; background-size: cover; cursor: pointer; }
 .videoPlay { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: rgb(0 0 0 / .65); color: white; font-size: 24px; padding-left: 4px; transition: transform .15s ease; }
 .videoPoster:hover .videoPlay, .videoPoster:focus-visible .videoPlay { transform: scale(1.08); }
+.account { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+.account button { border: 1px solid var(--stone); border-radius: var(--radius-pill); background: white; padding: 6px 12px; color: var(--graphite); font-size: 13px; font-weight: 700; }
+.account button:disabled { opacity: .5; }
+.contributor { color: var(--smoke); font-size: 12px; }

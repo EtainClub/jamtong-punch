@@ -7,7 +7,10 @@ import { z } from "zod";
 
 const id = z.string().regex(/^[a-z0-9-]+$/);
 const date = z.iso.date();
-const status = z.enum(["draft", "published", "archived"]);
+// "review": submitted by a contributor and waiting for an operator. Only
+// operators move content to published (and so onto the chain) or archived.
+export const STATUSES = ["draft", "review", "published", "archived"] as const;
+const status = z.enum(STATUSES);
 const datePrecision = z.enum(["day", "month", "year"]);
 // Whether the date was confirmed from a source or inferred (e.g. from who held
 // which office when). An estimated date is always shown as such.

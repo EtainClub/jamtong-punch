@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import { emptyCitation, formatTimecode, orNull, parseTimecode, slugify, youtubeVideoId, type Citation, type ContentType, type Draft } from "./content-form";
 import { detectMentions } from "@/lib/content/derive";
 import { firebaseJsonFetch } from "@/lib/firebase/api";
@@ -8,6 +8,13 @@ import { useFirebaseAuth } from "@/lib/firebase/auth";
 import styles from "./ops-content.module.css";
 
 export type Refs = Record<ContentType, Draft[]>;
+export type EditorRole = "ops" | "contributor";
+
+const EditorRoleContext = createContext<EditorRole>("contributor");
+export const EditorRoleProvider = EditorRoleContext.Provider;
+function useEditorRole() {
+  return useContext(EditorRoleContext);
+}
 type Update = (patch: Record<string, unknown>) => void;
 type Option = { id: string; label: string };
 type Choices = readonly (readonly [string, string])[];
@@ -16,7 +23,7 @@ const str = (value: unknown) => (typeof value === "string" ? value : "");
 function list<T>(value: unknown): T[] { return Array.isArray(value) ? value as T[] : []; }
 
 const precisions: Choices = [["day", "일"], ["month", "월"], ["year", "연"]];
-const statuses: Choices = [["draft", "초안"], ["published", "공개"], ["archived", "보관"]];
+const statuses: Choices = [["draft", "초안"], ["review", "검토 대기"], ["published", "공개"], ["archived", "보관"]];
 const statementKinds: Choices = [["remark", "발언"], ["interview", "인터뷰"], ["speech", "연설"], ["sns", "SNS"], ["hearing", "국회·청문"], ["action", "행동"], ["decision", "결정"], ["policy", "정책"]];
 const quoteKinds = new Set(["remark", "interview", "speech", "sns", "hearing"]);
 const evaluationFormats: Choices = [["video", "영상"], ["broadcast", "방송"], ["interview", "인터뷰"], ["column", "칼럼"], ["sns", "SNS"], ["book", "책"]];
@@ -111,8 +118,13 @@ function Corrections({ draft, update }: { draft: Draft; update: Update }) {
   </Field>;
 }
 
+// Contributors can only keep a draft or send it for review; publishing (and
+// with it the on-chain anchor) is an operator's decision.
 function Status({ draft, update }: { draft: Draft; update: Update }) {
-  return <Field label="공개 상태" required hint="공개하려면 참조하는 인물·사건·쟁점도 공개 상태여야 합니다"><Select value={str(draft.status)} onChange={(status) => update({ status })} choices={statuses} /></Field>;
+  if (useEditorRole() === "ops") {
+    return <Field label="공개 상태" required hint="공개하려면 참조하는 인물·사건·쟁점도 공개 상태여야 합니다. 공개하면 블록체인에 기록됩니다"><Select value={str(draft.status)} onChange={(status) => update({ status })} choices={statuses} /></Field>;
+  }
+  return <Field label="상태" required hint="'검토 요청'으로 저장하면 운영자가 확인한 뒤 공개합니다. 공개 전까지는 언제든 고칠 수 있습니다"><Select value={str(draft.status)} onChange={(status) => update({ status })} choices={[["draft", "초안"], ["review", "검토 요청"]]} /></Field>;
 }
 
 function withStatus(items: Draft[], label: (item: Draft) => string): Option[] {
@@ -149,6 +161,7 @@ type Role = { title: string; org: string | null; from: string | null; to: string
 type Image = { path: string; sourceUrl: string; license: string; rightsStatus: string; credit: string | null };
 
 function PersonForm({ draft, update, refs, isNew, image: upload }: FormProps) {
+  const role = useEditorRole();
   const roles = list<Role>(draft.roles);
   const image = draft.image as Image | null;
   const fileRef = useRef<HTMLInputElement>(null);
@@ -174,7 +187,8 @@ function PersonForm({ draft, update, refs, isNew, image: upload }: FormProps) {
       </div>)}</div>
       <button className={styles.secondary} onClick={() => update({ roles: [...roles, { title: "", org: null, from: null, to: null, citation: emptyCitation() }] })} type="button">직함 추가</button>
     </fieldset>
-    <fieldset className={styles.wide}><legend>사진과 권리 <em className={styles.optional}>선택</em></legend>
+    {role !== "ops" && <p className={`${styles.help} ${styles.wide}`}>사진은 저작권·초상권 확인이 필요해 운영자가 넣습니다.</p>}
+    {role === "ops" && <><fieldset className={styles.wide}><legend>사진과 권리 <em className={styles.optional}>선택</em></legend>
       {image ? <>
         <div className={styles.imageArea}><input className={styles.visuallyHidden} ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload.onFile(file); event.target.value = ""; }} /><div className={styles.preview} style={image.path ? { backgroundImage: `url(${image.path})` } : undefined}>{image.path ? "" : "이미지 미리보기"}</div><div><strong>사진을 선택하거나 화면에서 붙여넣으세요</strong><p>JPG · PNG · WebP, 최대 5MiB</p><button className={styles.secondary} onClick={() => fileRef.current?.click()} disabled={upload.uploading} type="button">{upload.uploading ? "업로드 중…" : "파일 선택"}</button> <button className={styles.secondary} onClick={() => update({ image: null, playable: false })} type="button">사진 없음</button></div></div>
         <div className={styles.fieldGrid}>
@@ -185,7 +199,7 @@ function PersonForm({ draft, update, refs, isNew, image: upload }: FormProps) {
         </div>
       </> : <><p className={styles.help}>사진이 없어도 아카이브에는 공개할 수 있습니다. 게임 대상이 되려면 권리가 확인된 사진이 필요합니다.</p><button className={styles.secondary} onClick={() => update({ image: { path: "", sourceUrl: "", license: "public", rightsStatus: "pending", credit: null } })} type="button">사진 추가</button></>}
     </fieldset>
-    <label className={`${styles.checkbox} ${styles.wide}`}><input type="checkbox" checked={draft.playable === true} disabled={image?.rightsStatus !== "cleared"} onChange={(event) => update({ playable: event.target.checked })} />게임 대상으로 쓰기 <small>권리가 확인된 사진이 있어야 켤 수 있습니다</small></label>
+    <label className={`${styles.checkbox} ${styles.wide}`}><input type="checkbox" checked={draft.playable === true} disabled={image?.rightsStatus !== "cleared"} onChange={(event) => update({ playable: event.target.checked })} />게임 대상으로 쓰기 <small>권리가 확인된 사진이 있어야 켤 수 있습니다</small></label></>}
     <Status draft={draft} update={update} />
     <Corrections draft={draft} update={update} />
   </>;
@@ -301,6 +315,7 @@ function TopicForm({ draft, update, refs }: FormProps) {
 type Video = { platform: "youtube"; videoId: string; durationSec: number | null };
 
 function SourceForm({ draft, update, isNew }: FormProps) {
+  const role = useEditorRole();
   const { user } = useFirebaseAuth();
   const [busy, setBusy] = useState<"lookup" | "archive" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -346,10 +361,11 @@ function SourceForm({ draft, update, isNew }: FormProps) {
     <Field label="설명란 스냅샷" optional wide hint="영상·기사의 설명을 등록 시점 그대로 옮겨 둡니다. 원본이 사라져도 무엇이었는지 남습니다"><textarea value={str(draft.description)} onChange={(event) => update({ description: orNull(event.target.value) })} /></Field>
     <Field label="확인한 날" optional hint="위 정보를 원본에서 확인한 날"><input type="date" value={str(draft.capturedAt)} onChange={(event) => update({ capturedAt: orNull(event.target.value) })} /></Field>
     <Field label="보존본 URL" optional hint="원본이 사라질 때를 대비한 아카이브 주소"><input type="url" value={str(draft.archiveUrl)} onChange={(event) => update({ archiveUrl: orNull(event.target.value) })} placeholder="https://web.archive.org/…" /></Field>
-    <div className={styles.wide}>{isNew
+    {role === "ops" && <div className={styles.wide}>{isNew
       ? <p className={styles.help}>먼저 저장하면 인터넷 아카이브에 보존본을 만들 수 있습니다.</p>
       : <button className={styles.secondary} onClick={() => void archive()} disabled={busy !== null} type="button">{busy === "archive" ? "보존본 만드는 중…" : "인터넷 아카이브에 보존본 만들기"}</button>}
-      {message && <p className={styles.help} aria-live="polite">{message}</p>}</div>
+      {message && <p className={styles.help} aria-live="polite">{message}</p>}</div>}
+    {role !== "ops" && message && <p className={`${styles.help} ${styles.wide}`} aria-live="polite">{message}</p>}
     <Field label="라이선스" required><Select value={str(draft.license)} onChange={(license) => update({ license })} choices={[["public", "공개"], ["quotable", "인용 가능"], ["link-only", "링크만"]]} /></Field>
     <Field label="권리 상태" required><Select value={str(draft.rightsStatus)} onChange={(rightsStatus) => update({ rightsStatus })} choices={[["pending", "확인 대기"], ["cleared", "확인됨"], ["flagged", "문제 있음"]]} /></Field>
   </>;
