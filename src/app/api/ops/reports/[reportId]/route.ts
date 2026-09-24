@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export async function PATCH(req: Request, context: { params: Promise<{ reportId: string }> }) {
   try {
     checkOrigin(req);
-    const caller = await verifyCaller(req);
+    const caller = await verifyCaller(req, { accountsSkipAppCheck: true });
     if (!caller.isOps) throw new Refusal(403, "ops-required");
     const body = reportStatusSchema.safeParse(await req.json());
     if (!body.success) throw new Refusal(400, "invalid-body");

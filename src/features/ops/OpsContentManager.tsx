@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { firebaseFormFetch, firebaseJsonFetch } from "@/lib/firebase/api";
+import { accountFormFetch, accountJsonFetch } from "@/lib/firebase/api";
 import { signInWithGoogle, useFirebaseAuth } from "@/lib/firebase/auth";
 import { contentTypes, emptyDraft, itemLabel, type ContentType, type Draft } from "./content-form";
 import { ContentForm, EditorRoleProvider, Field, type Refs } from "./ContentForms";
@@ -76,6 +76,7 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const deepLinkHandled = useRef(false);
 
   // Linking to Google keeps the same User object, so the flag is tracked on its own.
@@ -88,7 +89,7 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
 
   const loadProfile = useCallback(async () => {
     if (!user || !signedIn) { setProfile(null); return; }
-    try { setProfile(await firebaseJsonFetch<Profile>(user, "/api/me/profile")); }
+    try { setProfile(await accountJsonFetch<Profile>(user, "/api/me/profile")); }
     catch (cause) { setNotice({ ok: false, text: failure("계정 정보를 불러오지 못했습니다", cause) }); }
   }, [user, signedIn]);
   useEffect(() => { const timer = window.setTimeout(() => { void loadProfile(); }, 0); return () => window.clearTimeout(timer); }, [loadProfile]);
@@ -99,8 +100,9 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
     if (!user || !canEdit) return;
     setLoading(true);
     try {
-      const lists = await Promise.all(contentTypes.map(([key]) => firebaseJsonFetch<{ items: Draft[] }>(user, `/api/ops/content?type=${key}`)));
+      const lists = await Promise.all(contentTypes.map(([key]) => accountJsonFetch<{ items: Draft[] }>(user, `/api/ops/content?type=${key}`)));
       setRefs(Object.fromEntries(contentTypes.map(([key], index) => [key, lists[index].items])) as unknown as Refs);
+      setLoadError(null);
       // A link from a public page (?type=people&id=…) opens that item once.
       if (!deepLinkHandled.current) {
         deepLinkHandled.current = true;
@@ -113,7 +115,7 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
           if (params.get("id") && !linked) setNotice({ ok: false, text: `'${params.get("id")}' 항목을 찾지 못했습니다.` });
         }
       }
-    } catch (cause) { setNotice({ ok: false, text: failure("목록을 불러오지 못했습니다", cause) }); }
+    } catch (cause) { setLoadError(failure("목록을 불러오지 못했습니다", cause)); }
     finally { setLoading(false); }
   }, [user, canEdit]);
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
@@ -129,7 +131,7 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
     setUploading(true);
     try {
       const form = new FormData(); form.set("file", file);
-      const result = await firebaseFormFetch<{ url: string }>(user, "/api/ops/media", form);
+      const result = await accountFormFetch<{ url: string }>(user, "/api/ops/media", form);
       setDraft((current) => ({ ...current, image: { ...(current.image as Record<string, unknown> ?? { sourceUrl: "", license: "public", rightsStatus: "pending", credit: null }), path: result.url } }));
       setNotice({ ok: true, text: "이미지를 올렸습니다. 원본 출처와 권리 상태를 이어서 입력하세요." });
     } catch (cause) { setNotice({ ok: false, text: failure("이미지를 올리지 못했습니다", cause) }); }
@@ -151,7 +153,7 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
     if (!user) return;
     setLoading(true);
     try {
-      const { item } = await firebaseJsonFetch<{ item: Draft }>(user, `/api/ops/content/${type}/${draft.id}`, { method: "PUT", body: JSON.stringify({ data: draft }) });
+      const { item } = await accountJsonFetch<{ item: Draft }>(user, `/api/ops/content/${type}/${draft.id}`, { method: "PUT", body: JSON.stringify({ data: draft }) });
       setSelectedId(item.id); setDraft(item);
       setNotice({ ok: true, text: item.status === "published" ? "저장했습니다. 공개 화면과 관계도에 반영되고 블록체인에 기록됩니다." : item.status === "review" ? "검토를 요청했습니다. 운영자가 확인한 뒤 공개합니다." : "저장했습니다." });
       await load();
@@ -161,13 +163,13 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
   async function remove() {
     if (!user || !selectedId || !confirm(`'${selectedId}' 콘텐츠를 삭제할까요?`)) return;
     setLoading(true);
-    try { await firebaseJsonFetch<void>(user, `/api/ops/content/${type}/${selectedId}`, { method: "DELETE" }); open(type, null); setNotice({ ok: true, text: "삭제했습니다." }); await load(); }
+    try { await accountJsonFetch<void>(user, `/api/ops/content/${type}/${selectedId}`, { method: "DELETE" }); open(type, null); setNotice({ ok: true, text: "삭제했습니다." }); await load(); }
     catch (cause) { setNotice({ ok: false, text: failure("삭제하지 못했습니다", cause) }); }
     finally { setLoading(false); }
   }
   async function saveNickname(nickname: string) {
     if (!user) return;
-    await firebaseJsonFetch(user, "/api/me/profile", { method: "PUT", body: JSON.stringify({ nickname }) });
+    await accountJsonFetch(user, "/api/me/profile", { method: "PUT", body: JSON.stringify({ nickname }) });
     await loadProfile();
   }
 
@@ -201,7 +203,7 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
       </header>
       <div className={styles.tabs}>{visibleTypes.map(([key, name]) => <button key={key} className={key === type ? styles.active : ""} onClick={() => open(key, null)} type="button">{name}{asOps && reviewCount(key) > 0 && <small className={styles.reviewCount}>검토 {reviewCount(key)}</small>}</button>)}</div>
       <section className={styles.layout}>
-        <aside className={styles.sidebar}><div className={styles.sidebarHead}><strong>{asOps ? typeName : `내 ${typeName}`}</strong><button onClick={() => void load()} disabled={loading} type="button">새로고침</button></div>{items.length ? <ul>{[...items].sort((left, right) => Number(right.status === "review") - Number(left.status === "review")).map((item) => <li key={item.id}><button onClick={() => open(type, item)} className={item.id === selectedId ? styles.selected : ""} type="button"><b>{itemLabel(type, item, names)}</b><small className={item.status === "review" ? styles.reviewLabel : undefined}>{STATUS_LABELS[String(item.status)] ?? String(item.publisher ?? "")}</small></button></li>)}</ul> : <p>{asOps ? "아직 등록된 항목이 없습니다." : "아직 등록한 항목이 없습니다. 오른쪽에서 새로 등록하세요."}</p>}</aside>
+        <aside className={styles.sidebar}><div className={styles.sidebarHead}><strong>{asOps ? typeName : `내 ${typeName}`}</strong><button onClick={() => void load()} disabled={loading} type="button">새로고침</button></div>{loadError ? <p className={styles.error}>{loadError}</p> : items.length ? <ul>{[...items].sort((left, right) => Number(right.status === "review") - Number(left.status === "review")).map((item) => <li key={item.id}><button onClick={() => open(type, item)} className={item.id === selectedId ? styles.selected : ""} type="button"><b>{itemLabel(type, item, names)}</b><small className={item.status === "review" ? styles.reviewLabel : undefined}>{STATUS_LABELS[String(item.status)] ?? String(item.publisher ?? "")}</small></button></li>)}</ul> : <p>{asOps ? "아직 등록된 항목이 없습니다." : "아직 등록한 항목이 없습니다. 오른쪽에서 새로 등록하세요."}</p>}</aside>
         <section className={styles.editor}>
           <div className={styles.editorHead}><div><strong>{selectedId ? `${typeName} 수정` : `새 ${typeName}`}</strong><p>{type === "people" ? "인물 ID는 공개 주소가 됩니다." : "문서 ID는 자동 생성됩니다."}</p></div><button className={styles.secondary} onClick={() => open(type, null)} type="button">새로 만들기</button></div>
           {!editable && <p className={styles.help}>공개된 기록은 운영자만 고칠 수 있습니다. 고칠 점이 있으면 운영자에게 알려 주세요.</p>}

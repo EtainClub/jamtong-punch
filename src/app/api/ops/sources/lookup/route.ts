@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   try {
-    const caller = await verifyCaller(req);
+    const caller = await verifyCaller(req, { accountsSkipAppCheck: true });
     requireEditor(caller);
     const videoId = new URL(req.url).searchParams.get("videoId") ?? "";
     if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) throw new Refusal(400, "invalid-video-id");

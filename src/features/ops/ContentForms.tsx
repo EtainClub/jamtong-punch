@@ -3,7 +3,7 @@
 import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import { emptyCitation, formatTimecode, orNull, parseTimecode, slugify, youtubeVideoId, type Citation, type ContentType, type Draft } from "./content-form";
 import { detectMentions } from "@/lib/content/derive";
-import { firebaseJsonFetch } from "@/lib/firebase/api";
+import { accountJsonFetch } from "@/lib/firebase/api";
 import { useFirebaseAuth } from "@/lib/firebase/auth";
 import styles from "./ops-content.module.css";
 
@@ -331,7 +331,7 @@ function SourceForm({ draft, update, isNew }: FormProps) {
     if (!user || !video) return;
     setBusy("lookup"); setMessage(null);
     try {
-      const found = await firebaseJsonFetch<{ title: string | null; channel: string | null }>(user, `/api/ops/sources/lookup?videoId=${video.videoId}`);
+      const found = await accountJsonFetch<{ title: string | null; channel: string | null }>(user, `/api/ops/sources/lookup?videoId=${video.videoId}`);
       update({ ...(found.title ? { title: found.title } : {}), ...(found.channel ? { publisher: found.channel } : {}) });
       setMessage("제목과 채널을 채웠습니다. 게시일과 영상 길이는 직접 확인해 넣어 주세요.");
     } catch (cause) { setMessage(cause instanceof Error ? cause.message : "영상 정보를 가져오지 못했습니다."); }
@@ -341,7 +341,7 @@ function SourceForm({ draft, update, isNew }: FormProps) {
     if (!user) return;
     setBusy("archive"); setMessage("보존본을 만드는 중입니다. 1분 정도 걸릴 수 있습니다…");
     try {
-      const { item } = await firebaseJsonFetch<{ item: Draft }>(user, `/api/ops/sources/${draft.id}/archive`, { method: "POST" });
+      const { item } = await accountJsonFetch<{ item: Draft }>(user, `/api/ops/sources/${draft.id}/archive`, { method: "POST" });
       update({ archiveUrl: item.archiveUrl });
       setMessage("보존본을 저장했습니다.");
     } catch (cause) { setMessage(cause instanceof Error ? cause.message : "보존본을 만들지 못했습니다."); }

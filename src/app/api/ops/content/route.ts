@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   try {
-    const caller = await verifyCaller(req);
+    const caller = await verifyCaller(req, { accountsSkipAppCheck: true });
     requireEditor(caller);
     const type = contentTypeSchema.safeParse(new URL(req.url).searchParams.get("type"));
     if (!type.success) throw new Refusal(400, "invalid-content-type");

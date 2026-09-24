@@ -16,7 +16,7 @@ type Context = { params: Promise<{ type: string; id: string }> };
 
 async function target(req: Request, { params }: Context) {
   checkOrigin(req);
-  const actor = await editorActor(await verifyCaller(req));
+  const actor = await editorActor(await verifyCaller(req, { accountsSkipAppCheck: true }));
   const { type: rawType, id } = await params;
   const type = contentTypeSchema.safeParse(rawType);
   if (!type.success || !/^[a-z0-9-]+$/.test(id)) throw new Refusal(400, "invalid-content-target");

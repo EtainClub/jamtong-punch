@@ -14,7 +14,7 @@ type Context = { params: Promise<{ id: string }> };
 export async function POST(req: Request, { params }: Context) {
   try {
     checkOrigin(req);
-    const caller = await verifyCaller(req);
+    const caller = await verifyCaller(req, { accountsSkipAppCheck: true });
     if (!caller.isOps) throw new Refusal(403, "ops-required");
     const { id } = await params;
     const source = await getContent("sources", id);

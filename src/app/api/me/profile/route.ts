@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   try {
-    const caller = await verifyCaller(req);
+    const caller = await verifyCaller(req, { accountsSkipAppCheck: true });
     return Response.json({ isOps: caller.isOps, isContributor: caller.isContributor, nickname: caller.isContributor || caller.isOps ? await getNickname(caller.uid) : null });
   } catch (error) {
     return refusalResponse(error);
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 export async function PUT(req: Request) {
   try {
     checkOrigin(req);
-    const caller = await verifyCaller(req);
+    const caller = await verifyCaller(req, { accountsSkipAppCheck: true });
     requireEditor(caller);
     const body = await req.json() as { nickname?: unknown };
     return Response.json({ nickname: await setNickname(caller.uid, String(body.nickname ?? "")) });

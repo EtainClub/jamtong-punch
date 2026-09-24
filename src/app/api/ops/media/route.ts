@@ -16,7 +16,7 @@ const extensions: Record<string, string> = {
 export async function POST(req: Request) {
   try {
     checkOrigin(req);
-    const caller = await verifyCaller(req);
+    const caller = await verifyCaller(req, { accountsSkipAppCheck: true });
     if (!caller.isOps) throw new Refusal(403, "ops-required");
 
     const file = (await req.formData()).get("file");

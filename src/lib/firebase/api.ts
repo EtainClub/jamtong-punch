@@ -4,9 +4,11 @@ import { getLimitedUseToken } from "firebase/app-check";
 import { getIdToken } from "firebase/auth";
 import { firebaseAppCheck } from "@/lib/firebase/client";
 
-async function authenticatedFetch(user: Parameters<typeof getIdToken>[0], input: RequestInfo | URL, init: RequestInit = {}) {
+type FirebaseUser = Parameters<typeof getIdToken>[0];
+
+async function authenticatedFetch(user: FirebaseUser, input: RequestInfo | URL, init: RequestInit, withAppCheck: boolean) {
   const idToken = await getIdToken(user);
-  const appCheckToken = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === "true"
+  const appCheckToken = !withAppCheck || process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === "true"
     ? null
     : await getLimitedUseToken(firebaseAppCheck());
   return fetch(input, {
@@ -25,13 +27,18 @@ async function unwrap<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function firebaseJsonFetch<T>(user: Parameters<typeof getIdToken>[0], input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
-  return unwrap<T>(await authenticatedFetch(user, input, {
-    ...init,
-    headers: { "content-type": "application/json", ...init.headers },
-  }));
+const json = (init: RequestInit): RequestInit => ({ ...init, headers: { "content-type": "application/json", ...init.headers } });
+
+export async function firebaseJsonFetch<T>(user: FirebaseUser, input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
+  return unwrap<T>(await authenticatedFetch(user, input, json(init), true));
 }
 
-export async function firebaseFormFetch<T>(user: Parameters<typeof getIdToken>[0], input: RequestInfo | URL, form: FormData): Promise<T> {
-  return unwrap<T>(await authenticatedFetch(user, input, { method: "POST", body: form }));
+// For editing and profile routes, which trust a signed-in Google account
+// without App Check (see verifyCaller's accountsSkipAppCheck).
+export async function accountJsonFetch<T>(user: FirebaseUser, input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
+  return unwrap<T>(await authenticatedFetch(user, input, json(init), false));
+}
+
+export async function accountFormFetch<T>(user: FirebaseUser, input: RequestInfo | URL, form: FormData): Promise<T> {
+  return unwrap<T>(await authenticatedFetch(user, input, { method: "POST", body: form }, false));
 }
