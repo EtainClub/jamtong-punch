@@ -29,6 +29,17 @@ async function releaseLease() {
   await db.doc("system/anchors").set({ leaseUntil: Timestamp.fromMillis(0), lastRunAt: Timestamp.now() }, { merge: true });
 }
 
+// Writes one version's outcome in its own transaction. The job's copy of the
+// versions may be stale: an operator save can queue a new version meanwhile,
+// and overwriting the array would lose it.
+async function recordOutcome(ref: FirebaseFirestore.DocumentReference, v: number, patch: Partial<AnchorVersion>) {
+  await db.runTransaction(async (tx) => {
+    const current = ((await tx.get(ref)).get("versions") ?? []) as AnchorVersion[];
+    const versions = current.map((version) => (version.v === v ? { ...version, ...patch } : version));
+    tx.update(ref, { versions, hasPending: versions.some(isPending) });
+  });
+}
+
 // Sends pending versions oldest first. A version is only sent after the one
 // before it is on chain, so the prev links on chain always resolve. A lease
 // keeps two overlapping runs from sending the same version twice.
@@ -42,20 +53,20 @@ export async function broadcastPending(send: SendAnchor, limit = 20) {
     for (const snapshot of pending.docs) {
       const type = snapshot.get("type") as AnchorType;
       const id = snapshot.get("id") as string;
-      const versions = [...(snapshot.get("versions") as AnchorVersion[])];
-      for (let index = 0; index < versions.length; index += 1) {
-        if (!isPending(versions[index])) continue;
+      for (const version of snapshot.get("versions") as AnchorVersion[]) {
+        if (!isPending(version)) continue;
         try {
-          const result = await send(anchorMessage(type, id, versions[index]));
-          versions[index] = { ...versions[index], txId: result.txId, blockNum: result.blockNum, anchoredAt: new Date().toISOString(), error: null };
+          const result = await send(anchorMessage(type, id, version));
+          // Saved right after each send, so a later failure cannot erase the
+          // fact that this version is already on chain.
+          await recordOutcome(snapshot.ref, version.v, { txId: result.txId, blockNum: result.blockNum ?? null, anchoredAt: new Date().toISOString(), error: null });
           sent += 1;
         } catch (error) {
-          versions[index] = { ...versions[index], error: error instanceof Error ? error.message.slice(0, 300) : String(error) };
+          await recordOutcome(snapshot.ref, version.v, { error: error instanceof Error ? error.message.slice(0, 300) : String(error) });
           failed += 1;
           break;
         }
       }
-      await snapshot.ref.update({ versions, hasPending: versions.some(isPending) });
     }
   } finally {
     await releaseLease();
