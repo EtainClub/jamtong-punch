@@ -29,6 +29,12 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(sortDeep(value));
 }
 
+// Added after the first anchors went on chain. Leaving the default out keeps
+// those hashes valid; an estimated date is part of what the record claims,
+// so it is hashed. (speakerVerified is review state and is never hashed.)
+function estimatedOnly(certainty: "confirmed" | "estimated") {
+  return certainty === "estimated" ? certainty : undefined;
+}
 // Citations carry the source's identity (url, video) and the kept transcript,
 // not its editable title: renaming a source is not a change to what was said.
 function citation(value: Citation, sources: SourceRefs) {
@@ -45,6 +51,7 @@ export function statementPayload(value: Statement, sources: SourceRefs) {
     personId: value.personId,
     occurredAt: value.occurredAt,
     datePrecision: value.datePrecision,
+    dateCertainty: estimatedOnly(value.dateCertainty),
     kind: value.kind,
     headline: value.headline,
     quote: value.quote,
@@ -66,6 +73,7 @@ export function evaluationPayload(value: Evaluation, sources: SourceRefs) {
     evaluator: value.evaluator,
     occurredAt: value.occurredAt,
     datePrecision: value.datePrecision,
+    dateCertainty: estimatedOnly(value.dateCertainty),
     format: value.format,
     claim: value.claim,
     quote: value.quote,

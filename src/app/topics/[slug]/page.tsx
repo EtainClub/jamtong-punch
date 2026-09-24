@@ -63,7 +63,7 @@ export default async function TopicPage({ params, searchParams }: Props) {
 
       {events.length > 0 && <section className={styles.section} aria-labelledby="events-title">
         <div className={styles.sectionHead}><h2 id="events-title">관련 사건</h2></div>
-        <ul className={styles.topicList}>{events.map((event) => <li key={event.id}><Link href={`/events/${event.id}`}><strong>{event.title}</strong><span>{formatShortDate(event.occurredAt, event.datePrecision)}</span></Link></li>)}</ul>
+        <ul className={styles.topicList}>{events.map((event) => <li key={event.id}><Link href={`/events/${event.id}`}><strong>{event.title}</strong><span>{formatShortDate(event.occurredAt, event.datePrecision, event.dateCertainty)}</span></Link></li>)}</ul>
       </section>}
     </main>
   </>;

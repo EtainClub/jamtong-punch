@@ -90,10 +90,17 @@ function CitationList({ value, sources, onChange }: { value: Citation[]; sources
   </fieldset>;
 }
 
+// Unchecked records can still be published; the public card then says
+// "화자 확인 전" until someone checks the original.
+function SpeakerCheck({ draft, update, label }: { draft: Draft; update: Update; label: string }) {
+  return <label className={`${styles.checkbox} ${styles.wide}`}><input type="checkbox" checked={draft.speakerVerified === true} onChange={(event) => update({ speakerVerified: event.target.checked })} />{label} <small>확인 전이면 공개 화면에 &lsquo;화자 확인 전&rsquo;이 표시됩니다</small></label>;
+}
+
 function DateFields({ draft, update, label = "발생일" }: { draft: Draft; update: Update; label?: string }) {
   return <>
     <Field label={label} required><input type="date" value={str(draft.occurredAt)} onChange={(event) => update({ occurredAt: event.target.value })} /></Field>
     <Field label="날짜 정밀도" required hint="연도만 아는 기록을 1월 1일로 적지 않습니다"><Select value={str(draft.datePrecision)} onChange={(datePrecision) => update({ datePrecision })} choices={precisions} /></Field>
+    <Field label="날짜 확실성" required hint="출처에서 날짜를 확인하지 못하고 추정했다면 '추정'. 화면에 (추정)으로 표시됩니다"><Select value={str(draft.dateCertainty) || "confirmed"} onChange={(dateCertainty) => update({ dateCertainty })} choices={[["confirmed", "확인됨"], ["estimated", "추정"]]} /></Field>
   </>;
 }
 
@@ -196,6 +203,7 @@ function StatementForm({ draft, update, refs }: FormProps) {
     <Field label="맥락" required wide hint="어떤 질문·상황에 대한 것이었나"><textarea value={str(draft.context)} onChange={(event) => update({ context: event.target.value })} /></Field>
     <CitationList value={list<Citation>(draft.citations)} sources={refs.sources} onChange={(citations) => update({ citations })} />
     <Field label="판정" required><Select value={str(draft.assertionType)} onChange={(assertionType) => update({ assertionType })} choices={[["FACT", "사실"], ["CLAIM", "주장"], ["INTERPRETATION", "해석"]]} /></Field>
+    <SpeakerCheck draft={draft} update={update} label="원문이 이 사람의 말임을 원본에서 확인함" />
     <Field label="관련 사건" optional><Select value={str(draft.eventId)} onChange={(eventId) => update({ eventId: orNull(eventId) })} choices={toChoices(withStatus(refs.events, (item) => `${str(item.occurredAt)} ${str(item.title)}`))} placeholder="없음" /></Field>
     <CheckList legend="쟁점" options={topics(refs)} selected={list<string>(draft.topicIds)} onChange={(topicIds) => update({ topicIds })} />
     <DetectedMentions draft={draft} update={update} refs={refs} />
@@ -239,6 +247,7 @@ function EvaluationForm({ draft, update, refs }: FormProps) {
     <DateFields draft={draft} update={update} />
     <Field label="주장 요약" required wide hint="주어는 평가자입니다. 'OOO는 △△가 …라고 말했다'. 원문 범위를 넘지 않습니다"><textarea value={str(draft.claim)} onChange={(event) => update({ claim: event.target.value })} /></Field>
     <Field label="원문" optional wide><textarea value={str(draft.quote)} onChange={(event) => update({ quote: orNull(event.target.value) })} /></Field>
+    <SpeakerCheck draft={draft} update={update} label="이 평가가 평가자의 말임을 원본에서 확인함" />
     <fieldset className={styles.wide}><legend>근거 <b className={styles.required}>필수</b></legend>
       {segmentFormats.has(format) && <p className={styles.help}>영상·방송 평가는 구간이 필요합니다. 영상 전체를 근거로 등록하지 않습니다.</p>}
       <CitationEditor value={draft.citation as Citation} sources={refs.sources} onChange={(citation) => update({ citation })} segmentRequired={segmentFormats.has(format)} />

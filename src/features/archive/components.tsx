@@ -81,6 +81,13 @@ function CitedVideo({ citations, sources, title }: { citations: Citation[]; sour
   return <VideoEmbed videoId={source.video!.videoId} startSec={playable.startSec} endSec={playable.endSec} vertical={/\/shorts\//.test(source.url)} title={title} />;
 }
 
+// Not yet checked against the original that these words are this person's.
+// Same "pending" colour as claims: unverified, not wrong.
+function SpeakerBadge({ verified }: { verified: boolean }) {
+  if (verified) return null;
+  return <span className={styles.badge} title="원본에서 이 사람의 말인지 아직 확인하지 않았습니다">화자 확인 전</span>;
+}
+
 function AssertionBadge({ type }: { type: string }) {
   // "pending" colour marks claims and interpretations: not verified, not wrong.
   if (type === "FACT") return null;
@@ -96,9 +103,10 @@ export function StatementCard({ statement, sources, names, topics, showSpeaker =
   return <article className={styles.card}>
     <p className={styles.meta}>
       {showSpeaker && names[statement.personId] && <><Link href={`/people/${statement.personId}`}>{names[statement.personId]}</Link>·</>}
-      <time dateTime={statement.occurredAt}>{formatDate(statement.occurredAt, statement.datePrecision, { withYear: withYear ?? showSpeaker })}</time>
+      <time dateTime={statement.occurredAt}>{formatDate(statement.occurredAt, statement.datePrecision, { withYear: withYear ?? showSpeaker, certainty: statement.dateCertainty })}</time>
       <span>· {statementKindLabels[statement.kind]}</span>
       <AssertionBadge type={statement.assertionType} />
+      {statement.quote && <SpeakerBadge verified={statement.speakerVerified} />}
     </p>
     <h3 className={styles.headline}>{statement.headline}</h3>
     {statement.quote && <blockquote className={styles.quote}>“{statement.quote}”</blockquote>}
@@ -149,7 +157,7 @@ export function EvaluationCard({ evaluation, sources, names, topics, responses =
     : evaluation.evaluator.name;
   return <article className={styles.viewCard}>
     <p className={styles.evaluator}>{evaluatorName}<span>{evaluation.evaluator.descriptor}</span>{showTarget && names[evaluation.targetPersonId] && <span>→ <Link href={`/people/${evaluation.targetPersonId}?tab=views`}>{names[evaluation.targetPersonId]}</Link></span>}</p>
-    <p className={styles.meta}><time dateTime={evaluation.occurredAt}>{formatShortDate(evaluation.occurredAt, evaluation.datePrecision)}</time><span>· {evaluationFormatLabels[evaluation.format]}</span></p>
+    <p className={styles.meta}><time dateTime={evaluation.occurredAt}>{formatShortDate(evaluation.occurredAt, evaluation.datePrecision, evaluation.dateCertainty)}</time><span>· {evaluationFormatLabels[evaluation.format]}</span><SpeakerBadge verified={evaluation.speakerVerified} /></p>
     <CitedVideo citations={[evaluation.citation]} sources={sources} title={`${evaluation.evaluator.name}의 평가 영상`} />
     <p className={styles.claim}>{evaluation.claim}</p>
     {evaluation.quote && <blockquote className={styles.quote}>“{evaluation.quote}”</blockquote>}

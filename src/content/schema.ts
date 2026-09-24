@@ -9,6 +9,12 @@ const id = z.string().regex(/^[a-z0-9-]+$/);
 const date = z.iso.date();
 const status = z.enum(["draft", "published", "archived"]);
 const datePrecision = z.enum(["day", "month", "year"]);
+// Whether the date was confirmed from a source or inferred (e.g. from who held
+// which office when). An estimated date is always shown as such.
+const dateCertainty = z.enum(["confirmed", "estimated"]).default("confirmed");
+// Whether an operator checked, against the original, that the quoted words
+// are really this person's. Review state, not content: it is not hashed.
+const speakerVerified = z.boolean().default(false);
 const corrections = z.array(z.object({ at: date, note: z.string().min(1) }).strict()).default([]);
 
 export const citationSchema = z.object({
@@ -87,6 +93,8 @@ export const statementSchema = z.object({
   citations: z.array(citationSchema).min(1),
   topicIds: z.array(id).default([]),
   eventId: id.nullable().default(null),
+  dateCertainty,
+  speakerVerified,
   // People named in the quote are detected automatically. Operators can only
   // exclude a false match (a homonym, a common word), never add one.
   mentionExclusions: z.array(id).default([]),
@@ -114,6 +122,8 @@ export const evaluationSchema = z.object({
   topicIds: z.array(id).default([]),
   eventIds: z.array(id).default([]),
   respondsTo: id.nullable().default(null),
+  dateCertainty,
+  speakerVerified,
   status,
   corrections,
 }).strict()
@@ -127,6 +137,7 @@ export const eventSchema = z.object({
   title: z.string().min(1),
   occurredAt: date,
   endAt: date.nullable().default(null),
+  dateCertainty,
   datePrecision,
   summary: z.string().min(1),
   participants: z.array(z.object({

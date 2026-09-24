@@ -110,7 +110,7 @@ function CompareSheet({ person, topicName, statements, sources, closeHref }: { p
     <section className={styles.sheet} role="dialog" aria-modal="true" aria-labelledby="compare-title">
       <div className={styles.sheetHead}><h2 id="compare-title">{person.name} · #{topicName}</h2><Link href={closeHref} scroll={false} aria-label="닫기">✕</Link></div>
       <ol className={styles.timeline}>{ordered.map((statement) => <li key={statement.id}><div className={styles.card}>
-        <p className={styles.meta}><time dateTime={statement.occurredAt}>{formatShortDate(statement.occurredAt, statement.datePrecision)}</time></p>
+        <p className={styles.meta}><time dateTime={statement.occurredAt}>{formatShortDate(statement.occurredAt, statement.datePrecision, statement.dateCertainty)}</time></p>
         {statement.quote ? <blockquote className={styles.quote}>“{statement.quote}”</blockquote> : <p className={styles.headline}>{statement.headline}</p>}
         <CitationLinks citations={statement.citations} sources={sources} />
       </div></li>)}</ol>

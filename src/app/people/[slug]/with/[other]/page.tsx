@@ -74,7 +74,7 @@ function MentionCard({ statement, names, sources, people }: { statement: Stateme
   const target = people.find((person) => person.id !== statement.personId)!;
   return <article className={styles.viewCard}>
     <p className={styles.arrow}>언급 · <Link href={`/people/${statement.personId}`}>{names[statement.personId]}</Link> → <Link href={`/people/${target.id}`}>{target.name}</Link></p>
-    <p className={styles.meta}><time dateTime={statement.occurredAt}>{formatShortDate(statement.occurredAt, statement.datePrecision)}</time><span>· {statementKindLabels[statement.kind]}</span></p>
+    <p className={styles.meta}><time dateTime={statement.occurredAt}>{formatShortDate(statement.occurredAt, statement.datePrecision, statement.dateCertainty)}</time><span>· {statementKindLabels[statement.kind]}</span></p>
     <h2 className={styles.headline}>{statement.headline}</h2>
     {statement.quote && <blockquote className={styles.quote}>“{statement.quote}”</blockquote>}
     <CitationLinks citations={statement.citations} sources={sources} />

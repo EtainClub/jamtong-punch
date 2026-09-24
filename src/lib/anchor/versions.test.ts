@@ -1,6 +1,23 @@
 import { describe, expect, test } from "vitest";
-import { canonicalJson, payloadHash } from "./canonical";
+import { statementSchema } from "@/content/schema";
+import { canonicalJson, payloadHash, statementPayload } from "./canonical";
 import { nextVersion, type AnchorVersion } from "./versions";
+
+describe("fields added after the first anchors", () => {
+  const base = { id: "s", personId: "p", occurredAt: "2019-09-24", datePrecision: "day", kind: "remark", headline: "h", quote: "q", context: "c", citations: [{ sourceId: "src" }], assertionType: "FACT", status: "published" };
+  const refs = { src: { url: "https://example.com", videoId: null } };
+
+  test("a confirmed date and review flags leave existing hashes unchanged", () => {
+    const before = canonicalJson(statementPayload(statementSchema.parse(base), refs));
+    const after = canonicalJson(statementPayload(statementSchema.parse({ ...base, dateCertainty: "confirmed", speakerVerified: true }), refs));
+    expect(after).toBe(before);
+    expect(before).not.toContain("dateCertainty");
+  });
+
+  test("an estimated date is part of what is hashed", () => {
+    expect(canonicalJson(statementPayload(statementSchema.parse({ ...base, dateCertainty: "estimated" }), refs))).toContain('"dateCertainty":"estimated"');
+  });
+});
 
 const at = "2026-09-24T00:00:00.000Z";
 const anchored = (version: AnchorVersion | null): AnchorVersion => ({ ...version!, txId: "tx", blockNum: 1, anchoredAt: at });

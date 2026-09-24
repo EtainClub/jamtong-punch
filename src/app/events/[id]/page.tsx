@@ -35,7 +35,7 @@ export default async function EventPage({ params }: Props) {
       <section className={styles.hero}>
         <p className={styles.eyebrow}>사건</p>
         <h1>{event.title}</h1>
-        <p><time dateTime={event.occurredAt}>{formatDate(event.occurredAt, event.datePrecision)}</time>{event.endAt && <> – <time dateTime={event.endAt}>{formatDate(event.endAt, "day")}</time></>}</p>
+        <p><time dateTime={event.occurredAt}>{formatDate(event.occurredAt, event.datePrecision, { certainty: event.dateCertainty })}</time>{event.endAt && <> – <time dateTime={event.endAt}>{formatDate(event.endAt, "day")}</time></>}</p>
         <p>{event.summary}</p>
         <CitationLinks citations={event.citations} sources={sources} />
         {event.topicIds.length > 0 && <ul className={styles.chips}>{event.topicIds.filter((topic) => topicNames[topic]).map((topic) => <li key={topic}><Link className={styles.chip} href={`/topics/${topic}`}>#{topicNames[topic]}</Link></li>)}</ul>}

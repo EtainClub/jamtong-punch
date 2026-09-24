@@ -11,21 +11,28 @@ export function formatTimecode(seconds: number | null): string {
 
 type Precision = "day" | "month" | "year";
 
-// A date is shown only as precisely as it is known: a statement dated to a
-// month must not appear to have happened on the first of that month.
-export function formatDate(date: string, precision: Precision, options: { withYear?: boolean } = {}): string {
-  const [year, month, day] = date.split("-").map(Number);
-  const withYear = options.withYear ?? true;
-  if (precision === "year") return `${year}년`;
-  if (precision === "month") return withYear ? `${year}년 ${month}월` : `${month}월`;
-  return withYear ? `${year}년 ${month}월 ${day}일` : `${month}월 ${day}일`;
+type Certainty = "confirmed" | "estimated";
+
+function marked(label: string, certainty: Certainty | undefined) {
+  return certainty === "estimated" ? `${label} (추정)` : label;
 }
 
-export function formatShortDate(date: string, precision: Precision = "day"): string {
+// A date is shown only as precisely as it is known: a statement dated to a
+// month must not appear to have happened on the first of that month, and an
+// inferred date is always labelled as an estimate.
+export function formatDate(date: string, precision: Precision, options: { withYear?: boolean; certainty?: Certainty } = {}): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const withYear = options.withYear ?? true;
+  if (precision === "year") return marked(`${year}년`, options.certainty);
+  if (precision === "month") return marked(withYear ? `${year}년 ${month}월` : `${month}월`, options.certainty);
+  return marked(withYear ? `${year}년 ${month}월 ${day}일` : `${month}월 ${day}일`, options.certainty);
+}
+
+export function formatShortDate(date: string, precision: Precision = "day", certainty?: Certainty): string {
   const [year, month, day] = date.split("-");
-  if (precision === "year") return year;
-  if (precision === "month") return `${year}.${month}`;
-  return `${year}.${month}.${day}`;
+  if (precision === "year") return marked(year, certainty);
+  if (precision === "month") return marked(`${year}.${month}`, certainty);
+  return marked(`${year}.${month}.${day}`, certainty);
 }
 
 export function citationHref(citation: Citation, source: Source): string {
