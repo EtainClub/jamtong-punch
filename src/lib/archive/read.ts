@@ -4,12 +4,14 @@ import type { AnchorVersion } from "@/lib/anchor/versions";
 import { authored } from "@/lib/content/store";
 import { db } from "@/lib/firebase/admin";
 
-// Public reads of published content. Everything here is cached under the
-// "content" tag, which the ops content API expires on every write, so
-// Firestore reads scale with publishing, not with traffic.
+// Public reads of published content, cached under the "content" tag.
+// Writes expire that tag, but on App Hosting each server instance keeps its
+// own cache and the expiry only reaches the instance that handled the write.
+// The short revalidate bounds how long any other instance can show old
+// content; reads still scale with minutes, not with visits.
 
 export const CONTENT_TAG = "content";
-const CACHE = { tags: [CONTENT_TAG], revalidate: 3600 };
+const CACHE = { tags: [CONTENT_TAG], revalidate: 60 };
 
 export type PersonCounts = { statements: number; evaluationsReceived: number; evaluationsGiven: number; relations: number };
 export type PersonView = Person & { counts: PersonCounts };
