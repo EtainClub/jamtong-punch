@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { db } from "@/lib/firebase/admin";
-import { type Actor, ContentError, deleteContent, saveContent } from "@/lib/content/store";
+import { type Actor, ContentError, deleteContent, listContentFor, pendingReviewCount, rejectContent, rejectedCountFor, saveContent } from "@/lib/content/store";
 
 const enabled = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 const ops: Actor = { uid: "cb-test-ops", isOps: true };
 const alice: Actor = { uid: "cb-alice", isOps: false, nickname: "앨리스" };
 const bob: Actor = { uid: "cb-bob", isOps: false, nickname: "밥" };
-const ids: Array<[string, string]> = [["sources", "cb-source"], ["people", "cb-a"], ["people", "cb-new"], ["statements", "cb-s1"], ["statements", "cb-s2"], ["events", "cb-event"]];
+const ids: Array<[string, string]> = [["sources", "cb-source"], ["people", "cb-a"], ["people", "cb-new"], ["statements", "cb-s1"], ["statements", "cb-s2"], ["statements", "cb-s3"], ["events", "cb-event"]];
 
 const refusal = (promise: Promise<unknown>) => promise.then(() => null, (error: unknown) => (error instanceof ContentError ? error.status : error));
 const statement = (id: string, status: string) => ({
@@ -54,6 +54,30 @@ const statement = (id: string, status: string) => ({
     expect(await refusal(saveContent("people", "cb-new", { id: "cb-new", name: "라마바", summary: "시민", status: "review", image }, alice))).toBe(403);
     await saveContent("people", "cb-new", { id: "cb-new", name: "라마바", summary: "시민", status: "review" }, alice);
     expect(await refusal(saveContent("people", "cb-a", { id: "cb-a", name: "가나다", summary: "시민", status: "review" }, alice))).toBe(403);
+  });
+
+  test("an operator sends a submission back with a note; the contributor fixes and resubmits", async () => {
+    await saveContent("statements", "cb-s3", statement("cb-s3", "review"), alice);
+    expect(await pendingReviewCount()).toBeGreaterThanOrEqual(1);
+    expect(await refusal(rejectContent("statements", "cb-s3", "출처 구간을 확인해 주세요", alice))).toBe(403);
+    expect(await refusal(rejectContent("statements", "cb-s3", "  ", ops))).toBe(400);
+    expect(await refusal(saveContent("statements", "cb-s3", statement("cb-s3", "rejected"), ops))).toBe(400);
+    await rejectContent("statements", "cb-s3", "출처 구간을 확인해 주세요", ops);
+    expect(await rejectedCountFor("cb-alice")).toBe(1);
+    const listed = (await listContentFor("statements", alice)).find((item) => item.id === "cb-s3");
+    expect(listed).toMatchObject({ status: "rejected", rejection: { note: "출처 구간을 확인해 주세요", by: "cb-test-ops" } });
+
+    // Bob cannot see or touch it; Alice can resubmit, and the note stays for the next review.
+    expect((await listContentFor("statements", bob)).some((item) => item.id === "cb-s3")).toBe(false);
+    expect(await refusal(saveContent("statements", "cb-s3", statement("cb-s3", "review"), bob))).toBe(403);
+    await saveContent("statements", "cb-s3", statement("cb-s3", "review"), alice);
+    expect((await db.doc("statements/cb-s3").get()).get("rejection.note")).toBe("출처 구간을 확인해 주세요");
+    expect(await rejectedCountFor("cb-alice")).toBe(0);
+
+    // Publishing clears it; public records cannot be rejected.
+    await saveContent("statements", "cb-s3", statement("cb-s3", "published"), ops);
+    expect((await db.doc("statements/cb-s3").get()).get("rejection")).toBeUndefined();
+    expect(await refusal(rejectContent("statements", "cb-s3", "늦은 반려", ops))).toBe(409);
   });
 
   test("events stay with operators and contributor drafts can be withdrawn", async () => {

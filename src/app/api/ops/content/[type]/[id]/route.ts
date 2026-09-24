@@ -3,7 +3,7 @@ import { after } from "next/server";
 import { anchorPending } from "@/lib/anchor/run";
 import { CONTENT_TAG } from "@/lib/archive/read";
 import { refreshSourceAvailability } from "@/lib/content/check-sources";
-import { ContentError, contentTypeSchema, deleteContent, saveContent } from "@/lib/content/store";
+import { ContentError, contentTypeSchema, deleteContent, rejectContent, saveContent } from "@/lib/content/store";
 import { consumeContribution } from "@/lib/contributors/profile";
 import { editorActor } from "@/lib/guard/editor";
 import { verifyCaller } from "@/lib/guard/identity";
@@ -41,6 +41,20 @@ export async function PUT(req: Request, context: Context) {
     expireContent();
     anchorAfterResponse(type);
     return Response.json({ item });
+  } catch (error) {
+    return contentRefusal(error);
+  }
+}
+
+// The only partial update: an operator sends a submission back with a note
+// ({ rejectNote }). Nothing public changes, so no cache expiry or anchoring.
+export async function PATCH(req: Request, context: Context) {
+  try {
+    const { actor, type, id } = await target(req, context);
+    const body = await req.json() as { rejectNote?: unknown };
+    if (typeof body.rejectNote !== "string") throw new Refusal(400, "invalid-patch");
+    await rejectContent(type, id, body.rejectNote, actor);
+    return new Response(null, { status: 204 });
   } catch (error) {
     return contentRefusal(error);
   }

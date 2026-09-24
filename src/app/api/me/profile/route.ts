@@ -1,4 +1,5 @@
 import { ZodError } from "zod";
+import { pendingReviewCount, rejectedCountFor } from "@/lib/content/store";
 import { getNickname, setNickname } from "@/lib/contributors/profile";
 import { requireEditor } from "@/lib/guard/editor";
 import { verifyCaller } from "@/lib/guard/identity";
@@ -10,7 +11,15 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
   try {
     const caller = await verifyCaller(req, { accountsSkipAppCheck: true });
-    return Response.json({ isOps: caller.isOps, isContributor: caller.isContributor, nickname: caller.isContributor || caller.isOps ? await getNickname(caller.uid) : null });
+    const editor = caller.isContributor || caller.isOps;
+    const [nickname, reviewCount, rejectedCount] = await Promise.all([
+      editor ? getNickname(caller.uid) : null,
+      caller.isOps ? pendingReviewCount() : 0,
+      editor ? rejectedCountFor(caller.uid) : 0,
+    ]);
+    // The counts drive the header badges: work waiting for an operator, and
+    // the caller's own submissions that were sent back.
+    return Response.json({ isOps: caller.isOps, isContributor: caller.isContributor, nickname, reviewCount, rejectedCount });
   } catch (error) {
     return refusalResponse(error);
   }

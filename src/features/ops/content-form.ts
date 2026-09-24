@@ -94,3 +94,79 @@ export function itemLabel(type: ContentType, item: Draft, names: Map<string, str
     case "brackets": return item.id;
   }
 }
+
+// ------------------------------------------------------------- duplicates
+
+// Tracking parameters that do not change what a link points to.
+const TRACKING_PARAMS = /^(utm_.*|si|feature|fbclid|gclid|igshid|ref)$/;
+
+export function normalizeUrl(input: string): string {
+  const video = youtubeVideoId(input);
+  if (video) return `youtube:${video}`;
+  let url: URL;
+  try { url = new URL(input.trim()); } catch { return input.trim(); }
+  for (const key of [...url.searchParams.keys()]) if (TRACKING_PARAMS.test(key)) url.searchParams.delete(key);
+  url.searchParams.sort();
+  const host = url.hostname.toLowerCase().replace(/^www\.|^m\./, "");
+  const query = url.searchParams.toString();
+  return `${host}${url.pathname.replace(/\/+$/, "")}${query ? `?${query}` : ""}`;
+}
+
+type Segment = { sourceId: string; startSec: number | null; endSec: number | null };
+
+// Two citations of one source overlap unless both give ranges that are apart.
+// A citation without a start covers the whole source.
+function overlaps(left: Segment, right: Segment): boolean {
+  if (left.sourceId !== right.sourceId) return false;
+  if (left.startSec === null || right.startSec === null) return true;
+  const leftEnd = left.endSec ?? left.startSec;
+  const rightEnd = right.endSec ?? right.startSec;
+  return left.startSec <= rightEnd && right.startSec <= leftEnd;
+}
+
+const segments = (item: Draft): Segment[] => {
+  const citations = (item.citations ?? (item.citation ? [item.citation] : [])) as Segment[];
+  return citations.filter((citation) => citation.sourceId);
+};
+
+const text = (item: Draft, key: string) => (typeof item[key] === "string" ? (item[key] as string).trim() : "");
+
+// Likely duplicates of a draft among what the editor has loaded: the same link,
+// the same person's name, or the same speaker citing the same part of a
+// source. Only a warning: the same clip can hold two different remarks.
+export function findDuplicates(type: ContentType, draft: Draft, refs: Partial<Record<ContentType, Draft[]>>, names: Map<string, string>): string[] {
+  const others = (refs[type] ?? []).filter((item) => item.id !== draft.id && item.status !== "archived");
+  switch (type) {
+    case "sources": {
+      const url = text(draft, "url");
+      if (!url) return [];
+      const key = normalizeUrl(url);
+      return others.filter((item) => normalizeUrl(text(item, "url")) === key).map((item) => `같은 주소의 출처가 이미 있습니다: ${itemLabel(type, item, names)} (${item.id})`);
+    }
+    case "people": {
+      const name = text(draft, "name");
+      if (!name) return [];
+      return others
+        .filter((item) => text(item, "name") === name || ((item.aliases ?? []) as string[]).includes(name))
+        .map((item) => `같은 이름의 인물이 이미 있습니다: ${text(item, "name")} (${item.id}) — 동명이인이 아니면 기존 인물을 쓰세요`);
+    }
+    case "statements": {
+      const cited = segments(draft);
+      const quote = text(draft, "quote");
+      return others
+        .filter((item) => item.personId === draft.personId)
+        .filter((item) => (quote && text(item, "quote") === quote) || segments(item).some((segment) => cited.some((mine) => overlaps(segment, mine))))
+        .map((item) => `같은 화자가 같은 출처 구간에서 한 언행이 이미 있습니다: ${itemLabel(type, item, names)} (${item.id})`);
+    }
+    case "evaluations": {
+      const cited = segments(draft);
+      const evaluator = (draft.evaluator as { name?: string } | undefined)?.name?.trim();
+      return others
+        .filter((item) => item.targetPersonId === draft.targetPersonId && (item.evaluator as { name?: string } | undefined)?.name?.trim() === evaluator)
+        .filter((item) => segments(item).some((segment) => cited.some((mine) => overlaps(segment, mine))))
+        .map((item) => `같은 평가자가 같은 출처 구간에서 한 평가가 이미 있습니다: ${itemLabel(type, item, names)} (${item.id})`);
+    }
+    default:
+      return [];
+  }
+}

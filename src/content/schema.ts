@@ -7,9 +7,11 @@ import { z } from "zod";
 
 const id = z.string().regex(/^[a-z0-9-]+$/);
 const date = z.iso.date();
-// "review": submitted by a contributor and waiting for an operator. Only
-// operators move content to published (and so onto the chain) or archived.
-export const STATUSES = ["draft", "review", "published", "archived"] as const;
+// "review": submitted by a contributor and waiting for an operator.
+// "rejected": sent back by an operator with a note; the contributor fixes it
+// and submits again. Only operators move content to published (and so onto
+// the chain), rejected or archived.
+export const STATUSES = ["draft", "review", "rejected", "published", "archived"] as const;
 const status = z.enum(STATUSES);
 const datePrecision = z.enum(["day", "month", "year"]);
 // Whether the date was confirmed from a source or inferred (e.g. from who held

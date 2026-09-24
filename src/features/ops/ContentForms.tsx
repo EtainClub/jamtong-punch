@@ -23,7 +23,10 @@ const str = (value: unknown) => (typeof value === "string" ? value : "");
 function list<T>(value: unknown): T[] { return Array.isArray(value) ? value as T[] : []; }
 
 const precisions: Choices = [["day", "일"], ["month", "월"], ["year", "연"]];
-const statuses: Choices = [["draft", "초안"], ["review", "검토 대기"], ["published", "공개"], ["archived", "보관"]];
+// "반려" is set only through the reject button, which records a note; it is
+// listed so a rejected item still shows its state.
+const statuses: Choices = [["draft", "초안"], ["review", "검토 대기"], ["rejected", "반려"], ["published", "공개"], ["archived", "보관"]];
+const statusSuffix: Record<string, string> = { draft: " (초안)", review: " (검토 대기)", rejected: " (반려)", archived: " (보관)" };
 const statementKinds: Choices = [["remark", "발언"], ["interview", "인터뷰"], ["speech", "연설"], ["sns", "SNS"], ["hearing", "국회·청문"], ["action", "행동"], ["decision", "결정"], ["policy", "정책"]];
 const quoteKinds = new Set(["remark", "interview", "speech", "sns", "hearing"]);
 const evaluationFormats: Choices = [["video", "영상"], ["broadcast", "방송"], ["interview", "인터뷰"], ["column", "칼럼"], ["sns", "SNS"], ["book", "책"]];
@@ -124,11 +127,14 @@ function Status({ draft, update }: { draft: Draft; update: Update }) {
   if (useEditorRole() === "ops") {
     return <Field label="공개 상태" required hint="공개하려면 참조하는 인물·사건·쟁점도 공개 상태여야 합니다. 공개하면 블록체인에 기록됩니다"><Select value={str(draft.status)} onChange={(status) => update({ status })} choices={statuses} /></Field>;
   }
-  return <Field label="상태" required hint="'검토 요청'으로 저장하면 운영자가 확인한 뒤 공개합니다. 공개 전까지는 언제든 고칠 수 있습니다"><Select value={str(draft.status)} onChange={(status) => update({ status })} choices={[["draft", "초안"], ["review", "검토 요청"]]} /></Field>;
+  const choices: Choices = draft.status === "rejected"
+    ? [["rejected", "반려됨 — 고친 뒤 '검토 요청'을 고르세요"], ["draft", "초안"], ["review", "검토 요청"]]
+    : [["draft", "초안"], ["review", "검토 요청"]];
+  return <Field label="상태" required hint="'검토 요청'으로 저장하면 운영자가 확인한 뒤 공개합니다. 공개 전까지는 언제든 고칠 수 있습니다"><Select value={str(draft.status)} onChange={(status) => update({ status })} choices={choices} /></Field>;
 }
 
 function withStatus(items: Draft[], label: (item: Draft) => string): Option[] {
-  return items.map((item) => ({ id: item.id, label: `${label(item)}${item.status === "published" ? "" : item.status === "archived" ? " (보관)" : " (초안)"}` }));
+  return items.map((item) => ({ id: item.id, label: `${label(item)}${statusSuffix[String(item.status)] ?? ""}` }));
 }
 
 // ---------------------------------------------------------------- forms

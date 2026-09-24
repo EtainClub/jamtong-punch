@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { accountFormFetch, accountJsonFetch } from "@/lib/firebase/api";
 import { signInWithGoogle, useFirebaseAuth } from "@/lib/firebase/auth";
-import { contentTypes, emptyDraft, itemLabel, type ContentType, type Draft } from "./content-form";
+import { contentTypes, emptyDraft, findDuplicates, itemLabel, type ContentType, type Draft } from "./content-form";
 import { ContentForm, EditorRoleProvider, Field, type Refs } from "./ContentForms";
 import styles from "./ops-content.module.css";
 
@@ -12,7 +12,10 @@ const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const emptyRefs = (): Refs => Object.fromEntries(contentTypes.map(([key]) => [key, []])) as unknown as Refs;
 // Events and world-cup brackets stay with operators.
 const CONTRIBUTOR_TYPES = new Set<ContentType>(["people", "statements", "evaluations", "topics", "sources"]);
-const STATUS_LABELS: Record<string, string> = { draft: "초안", review: "검토 대기", published: "공개", archived: "보관" };
+const STATUS_LABELS: Record<string, string> = { draft: "초안", review: "검토 대기", rejected: "반려됨", published: "공개", archived: "보관" };
+// Statuses a contributor can still edit (and so sees in their own list).
+const OWN_OPEN = new Set(["draft", "review", "rejected"]);
+type Rejection = { note: string; at: string };
 
 type Profile = { isOps: boolean; isContributor: boolean; nickname: string | null };
 export type EditorMode = "ops" | "contributor";
@@ -151,13 +154,29 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
 
   async function save() {
     if (!user) return;
+    if (!asOps && draft.status === "rejected") { setNotice({ ok: false, text: "반려 사유대로 고친 뒤 상태를 '검토 요청'으로 바꿔 저장하세요." }); return; }
     setLoading(true);
+    // The rejection note is shown alongside, not part of the record.
+    const { rejection, ...data } = draft;
     try {
-      const { item } = await accountJsonFetch<{ item: Draft }>(user, `/api/ops/content/${type}/${draft.id}`, { method: "PUT", body: JSON.stringify({ data: draft }) });
-      setSelectedId(item.id); setDraft(item);
+      const { item } = await accountJsonFetch<{ item: Draft }>(user, `/api/ops/content/${type}/${draft.id}`, { method: "PUT", body: JSON.stringify({ data }) });
+      setSelectedId(item.id); setDraft(rejection && item.status !== "published" ? { ...item, rejection } : item);
       setNotice({ ok: true, text: item.status === "published" ? "저장했습니다. 공개 화면과 관계도에 반영되고 블록체인에 기록됩니다." : item.status === "review" ? "검토를 요청했습니다. 운영자가 확인한 뒤 공개합니다." : "저장했습니다." });
       await load();
     } catch (cause) { setNotice({ ok: false, text: failure("저장하지 못했습니다", cause) }); }
+    finally { setLoading(false); }
+  }
+  async function reject() {
+    if (!user || !selectedId) return;
+    const note = prompt("반려 사유를 적어 주세요. 등록한 사람에게 그대로 보입니다.");
+    if (note === null) return;
+    setLoading(true);
+    try {
+      await accountJsonFetch<void>(user, `/api/ops/content/${type}/${selectedId}`, { method: "PATCH", body: JSON.stringify({ rejectNote: note }) });
+      setDraft((current) => ({ ...current, status: "rejected", rejection: { note: note.trim(), at: new Date().toISOString() } }));
+      setNotice({ ok: true, text: "반려했습니다. 등록한 사람이 사유를 보고 고쳐 다시 요청할 수 있습니다." });
+      await load();
+    } catch (cause) { setNotice({ ok: false, text: failure("반려하지 못했습니다", cause) }); }
     finally { setLoading(false); }
   }
   async function remove() {
@@ -189,9 +208,14 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
 
   // Contributors see their own drafts and requests; public items are only
   // loaded so their forms can reference them.
-  const items = refs[type].filter((item) => asOps || item.status === "draft" || item.status === "review" || type === "sources");
-  const reviewCount = (key: ContentType) => refs[key].filter((item) => item.status === "review").length;
-  const editable = asOps || draft.status === undefined || draft.status === "draft" || draft.status === "review";
+  const items = refs[type].filter((item) => asOps || OWN_OPEN.has(String(item.status)) || type === "sources");
+  // What needs this user's attention: submissions waiting for an operator, or
+  // a contributor's own work that was sent back.
+  const attention = asOps ? "review" : "rejected";
+  const attentionCount = (key: ContentType) => refs[key].filter((item) => item.status === attention && (asOps || OWN_OPEN.has(String(item.status)))).length;
+  const editable = asOps || draft.status === undefined || OWN_OPEN.has(String(draft.status));
+  const rejection = draft.rejection as Rejection | undefined;
+  const duplicates = findDuplicates(type, draft, refs, names);
   return <EditorRoleProvider value={asOps ? "ops" : "contributor"}>
     <main className={styles.page}>
       <header className={styles.header}>
@@ -201,18 +225,20 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
           ? <><b className={styles.required}>검토 대기</b> 항목을 확인해 공개하세요. 공개하면 블록체인에 지문이 기록되어 되돌릴 수 없습니다.</>
           : <>필수 항목을 채워 &lsquo;검토 요청&rsquo;으로 저장하면 운영자가 확인한 뒤 공개합니다. 공개 전까지는 언제든 고칠 수 있고, 공개된 기록에는 &lsquo;등록: {profile.nickname}&rsquo;으로 표시됩니다.</>}</span>
       </header>
-      <div className={styles.tabs}>{visibleTypes.map(([key, name]) => <button key={key} className={key === type ? styles.active : ""} onClick={() => open(key, null)} type="button">{name}{asOps && reviewCount(key) > 0 && <small className={styles.reviewCount}>검토 {reviewCount(key)}</small>}</button>)}</div>
+      <div className={styles.tabs}>{visibleTypes.map(([key, name]) => <button key={key} className={key === type ? styles.active : ""} onClick={() => open(key, null)} type="button">{name}{attentionCount(key) > 0 && <small className={styles.reviewCount}>{asOps ? "검토" : "반려"} {attentionCount(key)}</small>}</button>)}</div>
       <section className={styles.layout}>
-        <aside className={styles.sidebar}><div className={styles.sidebarHead}><strong>{asOps ? typeName : `내 ${typeName}`}</strong><button onClick={() => void load()} disabled={loading} type="button">새로고침</button></div>{loadError ? <p className={styles.error}>{loadError}</p> : items.length ? <ul>{[...items].sort((left, right) => Number(right.status === "review") - Number(left.status === "review")).map((item) => <li key={item.id}><button onClick={() => open(type, item)} className={item.id === selectedId ? styles.selected : ""} type="button"><b>{itemLabel(type, item, names)}</b><small className={item.status === "review" ? styles.reviewLabel : undefined}>{STATUS_LABELS[String(item.status)] ?? String(item.publisher ?? "")}</small></button></li>)}</ul> : <p>{asOps ? "아직 등록된 항목이 없습니다." : "아직 등록한 항목이 없습니다. 오른쪽에서 새로 등록하세요."}</p>}</aside>
+        <aside className={styles.sidebar}><div className={styles.sidebarHead}><strong>{asOps ? typeName : `내 ${typeName}`}</strong><button onClick={() => void load()} disabled={loading} type="button">새로고침</button></div>{loadError ? <p className={styles.error}>{loadError}</p> : items.length ? <ul>{[...items].sort((left, right) => Number(right.status === attention) - Number(left.status === attention)).map((item) => <li key={item.id}><button onClick={() => open(type, item)} className={item.id === selectedId ? styles.selected : ""} type="button"><b>{itemLabel(type, item, names)}</b><small className={item.status === "review" || item.status === "rejected" ? styles.reviewLabel : undefined}>{STATUS_LABELS[String(item.status)] ?? String(item.publisher ?? "")}</small></button></li>)}</ul> : <p>{asOps ? "아직 등록된 항목이 없습니다." : "아직 등록한 항목이 없습니다. 오른쪽에서 새로 등록하세요."}</p>}</aside>
         <section className={styles.editor}>
           <div className={styles.editorHead}><div><strong>{selectedId ? `${typeName} 수정` : `새 ${typeName}`}</strong><p>{type === "people" ? "인물 ID는 공개 주소가 됩니다." : "문서 ID는 자동 생성됩니다."}</p></div><button className={styles.secondary} onClick={() => open(type, null)} type="button">새로 만들기</button></div>
           {!editable && <p className={styles.help}>공개된 기록은 운영자만 고칠 수 있습니다. 고칠 점이 있으면 운영자에게 알려 주세요.</p>}
+          {rejection && <div className={styles.rejection}><strong>{draft.status === "rejected" ? "반려됨" : "이전 반려 사유"}</strong><p>{rejection.note}</p><small>{new Date(rejection.at).toLocaleString("ko-KR")}</small></div>}
           <div className={styles.form}>
             {type !== "people" && <Field label="문서 ID" hint="자동 생성됨"><output>{draft.id}</output></Field>}
             <ContentForm key={formKey} type={type} draft={draft} update={update} refs={refs} isNew={!selectedId} image={{ uploading, onFile: (file) => void uploadImage(file) }} />
           </div>
+          {duplicates.length > 0 && <ul className={styles.duplicates}>{duplicates.map((message) => <li key={message}>{message}</li>)}</ul>}
           {notice && <p className={notice.ok ? styles.success : styles.error}>{notice.text}</p>}
-          <footer><button className={styles.delete} onClick={() => void remove()} disabled={!selectedId || loading || uploading || !editable} type="button">삭제</button><button className={styles.save} onClick={() => void save()} disabled={loading || uploading || !editable} type="button">{loading ? "처리 중…" : "검증 후 저장"}</button></footer>
+          <footer><span className={styles.footerLeft}><button className={styles.delete} onClick={() => void remove()} disabled={!selectedId || loading || uploading || !editable} type="button">삭제</button>{asOps && selectedId && draft.status === "review" && <button className={styles.secondary} onClick={() => void reject()} disabled={loading || uploading} type="button">반려</button>}</span><button className={styles.save} onClick={() => void save()} disabled={loading || uploading || !editable} type="button">{loading ? "처리 중…" : "검증 후 저장"}</button></footer>
         </section>
       </section>
     </main>

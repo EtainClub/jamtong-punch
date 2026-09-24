@@ -28,3 +28,7 @@
 .gate { display: grid; max-width: 520px; gap: 16px; margin: 0 auto; padding: 72px 24px; }.gate h1 { margin: 0; font-size: 32px; letter-spacing: -.04em; }.gate p { margin: 0; color: var(--smoke); line-height: 1.6; }.gate code { word-break: break-all; }.gate > button { justify-self: start; border: 0; border-radius: 9px; padding: 11px 15px; font-weight: 800; }.gate > button:disabled { opacity: .5; }
 .reviewCount { margin-left: 6px; border-radius: 999px; background: var(--burgundy-tint); padding: 1px 6px; color: var(--burgundy); font-size: 11px; font-weight: 800; }.tabs .active .reviewCount { background: white; }
 .sidebar .reviewLabel { color: var(--burgundy); font-weight: 800; }
+.rejection { margin: 0 0 18px; border-left: 3px solid var(--burgundy); border-radius: 8px; background: var(--burgundy-tint); padding: 12px 14px; }.rejection strong { color: var(--burgundy); font-size: 14px; }.rejection p { margin: 6px 0; white-space: pre-wrap; }.rejection small { color: var(--smoke); font-size: 12px; }
+.duplicates { margin: 18px 0 0; border-radius: 8px; background: #fff7e0; padding: 10px 14px 10px 30px; color: #7a5200; font-size: 13px; line-height: 1.6; }
+.footerLeft { display: flex; gap: 8px; }
+.editor footer .secondary { border: 1px solid var(--stone); background: white; color: var(--graphite); }

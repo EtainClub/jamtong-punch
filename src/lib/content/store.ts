@@ -44,7 +44,9 @@ const schemas = {
   brackets: bracketSchema,
 } as const;
 
-const META_FIELDS = ["createdAt", "createdBy", "updatedAt", "updatedBy", "contributor"];
+const META_FIELDS = ["createdAt", "createdBy", "updatedAt", "updatedBy", "contributor", "rejection"];
+// What signed-in contributors may submit. Events and brackets stay with operators.
+const CONTRIBUTABLE = new Set<ContentType>(["people", "statements", "evaluations", "sources", "topics"]);
 export const DERIVED_FIELDS: Record<ContentType, string[]> = {
   people: ["counts", "searchTokens", "sourceIds"],
   sources: ["availability"],
@@ -84,16 +86,40 @@ export async function listContent<T extends ContentType>(type: T): Promise<Conte
   return snapshots.docs.map((snapshot) => authored(type, snapshot.data())).sort((left, right) => left.id.localeCompare(right.id));
 }
 
+// An operator's reason for sending a submission back. Kept through later
+// edits so the next review sees it; cleared on publication.
+export type Rejection = { note: string; by: string; at: string };
+export type EditorItem<T extends ContentType> = ContentMap[T] & { rejection?: Rejection };
+
+function editorItem<T extends ContentType>(type: T, snapshot: FirebaseFirestore.DocumentSnapshot): EditorItem<T> {
+  const rejection = snapshot.get("rejection") as { note: string; by: string; at: Timestamp } | undefined;
+  const value = authored(type, snapshot.data()!);
+  return rejection ? { ...value, rejection: { note: rejection.note, by: rejection.by, at: rejection.at.toDate().toISOString() } } : value;
+}
+
 // What the content editor lists for a caller. Operators see everything;
 // contributors see what is public (to reference it) plus their own work.
-export async function listContentFor<T extends ContentType>(type: T, caller: { uid: string; isOps: boolean }): Promise<ContentMap[T][]> {
-  if (caller.isOps || type === "sources") return listContent(type);
-  const [published, own] = await Promise.all([
-    collection(type).where("status", "==", "published").get(),
-    collection(type).where("createdBy", "==", caller.uid).get(),
-  ]);
-  const byId = new Map([...published.docs, ...own.docs].map((snapshot) => [snapshot.id, authored(type, snapshot.data())]));
+export async function listContentFor<T extends ContentType>(type: T, caller: { uid: string; isOps: boolean }): Promise<EditorItem<T>[]> {
+  const snapshots = caller.isOps || type === "sources"
+    ? (await collection(type).get()).docs
+    : (await Promise.all([
+      collection(type).where("status", "==", "published").get(),
+      collection(type).where("createdBy", "==", caller.uid).get(),
+    ])).flatMap((result) => result.docs);
+  const byId = new Map(snapshots.map((snapshot) => [snapshot.id, editorItem(type, snapshot)]));
   return [...byId.values()].sort((left, right) => left.id.localeCompare(right.id));
+}
+
+// Header badges: submissions waiting for an operator, or a contributor's own
+// submissions that were sent back.
+export async function pendingReviewCount(): Promise<number> {
+  const counts = await Promise.all([...CONTRIBUTABLE].map((type) => collection(type).where("status", "==", "review").count().get()));
+  return counts.reduce((sum, result) => sum + result.data().count, 0);
+}
+
+export async function rejectedCountFor(uid: string): Promise<number> {
+  const results = await Promise.all([...CONTRIBUTABLE].map((type) => collection(type).where("createdBy", "==", uid).select("status").get()));
+  return results.flatMap((result) => result.docs).filter((snapshot) => snapshot.get("status") === "rejected").length;
 }
 
 export async function getContent<T extends ContentType>(type: T, id: string): Promise<ContentMap[T] | null> {
@@ -461,8 +487,10 @@ async function readStored(type: ContentType, id: string): Promise<Derived | null
 // ops API); contributors are signed-in users whose writes are restricted.
 export type Actor = { uid: string; isOps: boolean; nickname?: string | null };
 
-const CONTRIBUTABLE = new Set<ContentType>(["people", "statements", "evaluations", "sources", "topics"]);
+// Contributors may set only these statuses, and may edit their own work while
+// it is in one of them or was sent back to them.
 const CONTRIBUTOR_STATUSES = new Set(["draft", "review"]);
+const CONTRIBUTOR_EDITABLE = new Set([...CONTRIBUTOR_STATUSES, "rejected"]);
 
 function toActor(actor: string | Actor): Actor {
   return typeof actor === "string" ? { uid: actor, isOps: true } : actor;
@@ -485,7 +513,7 @@ function assertContributorOwns(current: FirebaseFirestore.DocumentSnapshot, acto
   if (actor.isOps || !current.exists) return;
   if (current.get("createdBy") !== actor.uid) throw new ContentError(403, "contributors can only edit their own submissions");
   const status = current.get("status");
-  if (status !== undefined && !CONTRIBUTOR_STATUSES.has(status)) throw new ContentError(403, "only operators can change published or archived content");
+  if (status !== undefined && !CONTRIBUTOR_EDITABLE.has(status)) throw new ContentError(403, "only operators can change published or archived content");
 }
 
 export async function saveContent(type: ContentType, id: string, data: unknown, actorOrUid: string | Actor) {
@@ -501,6 +529,7 @@ export async function saveContent(type: ContentType, id: string, data: unknown, 
   await validate(type, value);
   const before = await readStored(type, id);
   const status = (value as { status?: string }).status;
+  if (status === "rejected" && (before as { status?: string } | null)?.status !== "rejected") throw new ContentError(400, "반려는 사유와 함께 '반려' 버튼으로 합니다.");
   if (before && (before as { status?: string }).status === "published" && status !== "published") {
     const published = (await dependentsOf(type, id)).filter((item) => item.status === "published");
     if (published.length) throw new ContentError(409, `published content still references it: ${describe(published)}`);
@@ -527,6 +556,7 @@ export async function saveContent(type: ContentType, id: string, data: unknown, 
       ...(type === "topics" ? { counts: current.get("counts") ?? EMPTY_TOPIC_COUNTS } : {}),
       ...(type === "sources" && current.get("availability") ? { availability: current.get("availability") } : {}),
       ...(contributor ? { contributor } : {}),
+      ...(status !== "published" && current.get("rejection") ? { rejection: current.get("rejection") } : {}),
       createdAt: current.get("createdAt") ?? now,
       createdBy: current.get("createdBy") ?? actor.uid,
       updatedAt: now,
@@ -536,6 +566,26 @@ export async function saveContent(type: ContentType, id: string, data: unknown, 
   await refreshDerived(type, before, { ...value, ...derived } as Derived);
   await refreshAnchors(type, id, value);
   return value;
+}
+
+export const REJECTION_NOTE_MAX = 500;
+
+// Operators send a submission back with a note instead of publishing it.
+// Only unpublished work can be rejected; public records are archived instead.
+export async function rejectContent(type: ContentType, id: string, note: string, actor: Actor) {
+  if (!actor.isOps) throw new ContentError(403, "only operators reject submissions");
+  const trimmed = note.trim();
+  if (!trimmed || trimmed.length > REJECTION_NOTE_MAX) throw new ContentError(400, `반려 사유를 1~${REJECTION_NOTE_MAX}자로 적어 주세요.`);
+  const before = await readStored(type, id);
+  if (!before) throw new ContentError(400, "content not found");
+  const ref = collection(type).doc(id);
+  await db.runTransaction(async (transaction) => {
+    const status = (await transaction.get(ref)).get("status");
+    if (status !== "draft" && status !== "review" && status !== "rejected") throw new ContentError(409, "공개했거나 보관한 기록은 반려할 수 없습니다. 보관으로 내리세요.");
+    const now = Timestamp.now();
+    transaction.update(ref, { status: "rejected", rejection: { note: trimmed, by: actor.uid, at: now }, updatedAt: now, updatedBy: actor.uid });
+  });
+  await refreshDerived(type, before, { ...before, status: "rejected" } as Derived);
 }
 
 export async function deleteContent(type: ContentType, id: string, actorOrUid: string | Actor = { uid: "system", isOps: true }) {
