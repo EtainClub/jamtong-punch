@@ -53,8 +53,7 @@ export function SwipeDeck({ cards }: { cards: SwipeCard[] }) {
   useEffect(() => {
     session.current = { id: crypto.randomUUID(), startedAt: new Date().toISOString() };
     shownAt.current = performance.now();
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timeout = window.setTimeout(() => setSound(soundPreference() && !reduced), 0);
+    const timeout = window.setTimeout(() => setSound(soundPreference()), 0);
     return () => window.clearTimeout(timeout);
   }, []);
 

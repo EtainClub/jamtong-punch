@@ -66,7 +66,7 @@ export function ReflexGame({ person, mode, header, backHref }: {
 
   useEffect(() => {
     reducedMotion.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timeout = window.setTimeout(() => setSound(soundPreference() && !reducedMotion.current), 0);
+    const timeout = window.setTimeout(() => setSound(soundPreference()), 0);
     return () => window.clearTimeout(timeout);
   }, []);
 

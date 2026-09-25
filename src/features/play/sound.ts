@@ -1,11 +1,16 @@
 "use client";
 
-// Synthesized hit sounds: no audio files to download, and nothing plays until
-// the player turns sound on (off by default, remembered per browser).
+// Synthesized game sounds: no audio files to download. Sound is on unless the
+// player turned it off (remembered per browser, shared by every game) or the
+// device asks for reduced motion and the player never turned it on.
 const KEY = "imtong:sound";
 
 export function soundPreference(): boolean {
-  try { return localStorage.getItem(KEY) === "on"; } catch { return false; }
+  let stored: string | null = null;
+  try { stored = localStorage.getItem(KEY); } catch { /* private mode: fall back to the default */ }
+  if (stored === "on") return true;
+  if (stored === "off") return false;
+  return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 export function saveSoundPreference(on: boolean) {
@@ -104,6 +109,44 @@ export function playHit(kind: "punch" | "cheer", combo: number) {
   if (!ctx) return;
   if (kind === "punch") punch(ctx, combo);
   else cheer(ctx, combo);
+}
+
+// A quick bright blip for picks that are neither a punch nor a cheer.
+function blip(audio: AudioContext) {
+  const now = audio.currentTime;
+  const tone = audio.createOscillator();
+  tone.type = "triangle";
+  tone.frequency.setValueAtTime(880, now);
+  tone.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
+  tone.connect(envelope(audio, now, 0.18, 0.005, 0.16));
+  tone.start(now);
+  tone.stop(now + 0.2);
+}
+
+// The champion: a rising four-note arpeggio.
+function fanfare(audio: AudioContext) {
+  const now = audio.currentTime;
+  [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+    const at = now + index * 0.09;
+    const tone = audio.createOscillator();
+    tone.type = "triangle";
+    tone.frequency.setValueAtTime(frequency, at);
+    tone.connect(envelope(audio, at, 0.16, 0.01, index === 3 ? 0.6 : 0.2));
+    tone.start(at);
+    tone.stop(at + (index === 3 ? 0.7 : 0.25));
+  });
+}
+
+export type PickTone = "punch" | "cheer" | "pick";
+
+// World cup picks sound like the game they echo; the final pick gets a fanfare.
+export function playPick(tone: PickTone, final: boolean) {
+  const ctx = audio();
+  if (!ctx) return;
+  if (final) fanfare(ctx);
+  else if (tone === "punch") punch(ctx, 0);
+  else if (tone === "cheer") cheer(ctx, 0);
+  else blip(ctx);
 }
 
 // Swipe decks sound like the reflex game for punch and cheer, and whoosh for

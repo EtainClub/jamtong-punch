@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ShareButton } from "@/features/archive/ShareButton";
 import { firebaseJsonFetch } from "@/lib/firebase/api";
 import { useFirebaseAuth } from "@/lib/firebase/auth";
+import { playPick, saveSoundPreference, soundPreference, type PickTone } from "./sound";
 import styles from "./worldcup.module.css";
 
 // A statement (speaker, headline, quote, source) or a person (name, role, photo).
@@ -12,6 +13,17 @@ export type Contender = { id: string; title: string; subtitle: string; quote: st
 type Match = { round: number; leftId: string; rightId: string; winner: "left" | "right" };
 
 const roundName = (size: number) => (size === 2 ? "결승" : `${size}강`);
+
+// What a pick looks and sounds like, by question: choosing who to punch (or
+// the more problematic statement) lands a punch, choosing who to cheer sends
+// a heart, "more urgent" flashes. The champion gets a trophy and a fanfare.
+const PICK_FX: Record<string, { emoji: string; tone: PickTone }> = {
+  "more-punch": { emoji: "👊", tone: "punch" },
+  "more-problematic": { emoji: "👊", tone: "punch" },
+  "more-cheer": { emoji: "❤️", tone: "cheer" },
+  "more-urgent": { emoji: "⚡", tone: "pick" },
+};
+const PICK_MS = 420;
 
 // implementation-design 7.5: entrants meet in the given order (the server
 // checks that exact shape), and the picks go to the comparison ledger only,
@@ -32,7 +44,22 @@ export function WorldCup({ bracketId, questionId, question, contenders, sharePat
   const [round, setRound] = useState(1);
   const [champion, setChampion] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [sound, setSound] = useState(false);
+  const [picked, setPicked] = useState<{ side: "left" | "right"; key: number } | null>(null);
   const sessionId = useRef<string | null>(null);
+  const pickCount = useRef(0);
+  const fx = PICK_FX[questionId ?? ""] ?? { emoji: "✔️", tone: "pick" as const };
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setSound(soundPreference()), 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  function toggleSound() {
+    const next = !sound;
+    setSound(next);
+    saveSoundPreference(next);
+  }
 
   const pair = winners.length * 2;
   const left = byId.get(field[pair]);
@@ -49,8 +76,17 @@ export function WorldCup({ bracketId, questionId, question, contenders, sharePat
     }
   }
 
+  // The chosen card shows the pick for a moment before the next pair comes up.
   function pick(side: "left" | "right") {
-    if (!left || !right || champion) return;
+    if (!left || !right || champion || picked) return;
+    if (sound) playPick(fx.tone, field.length === 2);
+    pickCount.current += 1;
+    setPicked({ side, key: pickCount.current });
+    window.setTimeout(() => { setPicked(null); advance(side); }, PICK_MS);
+  }
+
+  function advance(side: "left" | "right") {
+    if (!left || !right) return;
     const allMatches = [...matches, { round, leftId: left.id, rightId: right.id, winner: side }];
     const nextWinners = [...winners, side === "left" ? left.id : right.id];
     setMatches(allMatches);
@@ -78,7 +114,7 @@ export function WorldCup({ bracketId, questionId, question, contenders, sharePat
     return <section className={styles.result} aria-live="polite">
       <p className={styles.question}>{question}</p>
       <h1>내가 고른 1위</h1>
-      <Card item={winner} />
+      <div className={styles.champion}><Card item={winner} /><span className={styles.trophy} aria-hidden="true">🏆</span></div>
       <p className={styles.recorded}>{status}</p>
       <p className={styles.help}>이것은 나의 비교 기록입니다. 지지율이나 여론조사 결과가 아니고, 임통은 이 결과로 순위를 공개하지 않습니다.</p>
       <ol className={styles.path}>{matches.map((match, index) => {
@@ -95,12 +131,15 @@ export function WorldCup({ bracketId, questionId, question, contenders, sharePat
   }
 
   return <section className={styles.game} aria-label="월드컵">
-    <p className={styles.round}>{roundName(field.length)} · {winners.length + 1} / {field.length / 2}</p>
+    <div className={styles.top}>
+      <p className={styles.round}>{roundName(field.length)} · {winners.length + 1} / {field.length / 2}</p>
+      <button className={styles.sound} onClick={toggleSound} type="button" aria-pressed={sound} aria-label={sound ? "효과음 끄기" : "효과음 켜기"}>{sound ? "🔊" : "🔈"}</button>
+    </div>
     <h1 className={styles.question}>{question}</h1>
     <div className={styles.pair} role="group" aria-label="둘 중 하나를 고르세요">
-      {left && <button className={styles.choice} onClick={() => pick("left")} type="button"><Card item={left} /></button>}
+      {left && <button className={`${styles.choice} ${picked?.side === "left" ? styles.chosen : picked ? styles.dropped : ""}`} onClick={() => pick("left")} type="button"><Card item={left} />{picked?.side === "left" && <span key={picked.key} className={styles.pop} aria-hidden="true">{fx.emoji}</span>}</button>}
       <span className={styles.vs} aria-hidden="true">VS</span>
-      {right && <button className={styles.choice} onClick={() => pick("right")} type="button"><Card item={right} /></button>}
+      {right && <button className={`${styles.choice} ${picked?.side === "right" ? styles.chosen : picked ? styles.dropped : ""}`} onClick={() => pick("right")} type="button"><Card item={right} />{picked?.side === "right" && <span key={picked.key} className={styles.pop} aria-hidden="true">{fx.emoji}</span>}</button>}
     </div>
     <p className={styles.help}>카드를 눌러 고릅니다.{left?.sourceHref ? " 출처는 고르기 전에 새 창으로 확인할 수 있습니다." : ""}</p>
     <div className={styles.sources}>{[left, right].map((item) => item?.sourceHref && <a key={item.id} href={item.sourceHref} target="_blank" rel="noreferrer">{item.title} 출처: {item.sourceLabel}</a>)}</div>

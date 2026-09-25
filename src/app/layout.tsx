@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { VersionNotice } from "@/features/version/VersionNotice";
 import { FirebaseAuthProvider } from "@/lib/firebase/auth";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -14,8 +15,10 @@ export const metadata: Metadata = {
   description,
   openGraph: { siteName: SITE_NAME, locale: "ko_KR", type: "website", description },
   twitter: { card: "summary_large_image" },
+  // iOS has no install prompt; "홈 화면에 추가" opens full screen with this.
+  appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: "default" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  return <html lang="ko"><body><FirebaseAuthProvider>{children}</FirebaseAuthProvider></body></html>;
+  return <html lang="ko"><body><FirebaseAuthProvider>{children}</FirebaseAuthProvider><VersionNotice /></body></html>;
 }

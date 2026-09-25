@@ -29,3 +29,23 @@
 .person img { width: 88px; height: 88px; flex-shrink: 0; border-radius: 50%; object-fit: cover; }
 .person > span { display: grid; gap: 4px; }
 .person strong { font-size: 22px; letter-spacing: -.04em; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sound { border: 1px solid var(--stone); border-radius: var(--radius-pill); background: white; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.choice { position: relative; overflow: hidden; }
+.chosen { border-color: var(--ink); transform: scale(1.02); }
+.dropped { opacity: .45; }
+.pop { position: absolute; top: 50%; left: 50%; font-size: 72px; line-height: 1; pointer-events: none; animation: pick .42s ease-out forwards; }
+@keyframes pick {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); }
+  35% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -70%) scale(1); }
+}
+.champion { position: relative; }
+.trophy { position: absolute; top: -18px; right: 12px; font-size: 56px; line-height: 1; animation: trophy .7s ease-out; }
+@keyframes trophy { from { opacity: 0; transform: translateY(12px) scale(.5); } to { opacity: 1; transform: none; } }
+@keyframes pickFade { 0%, 50% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .chosen { transform: none; }
+  .pop { animation: pickFade .42s ease-out forwards; transform: translate(-50%, -50%); }
+  .trophy { animation: none; }
+}
