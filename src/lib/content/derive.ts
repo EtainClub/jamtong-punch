@@ -49,10 +49,17 @@ function termPattern(term: string): RegExp {
   return /[A-Za-z]/.test(term) ? new RegExp(`(?<![A-Za-z])${escaped}(?![A-Za-z])`, "i") : new RegExp(escaped);
 }
 
+// Names of organizations that contain a person's name: "조국혁신당" is a party,
+// not a mention of 조국. They are blanked out before names are matched. A
+// one-off false match (조국 meaning "homeland") is dropped per statement with
+// mentionExclusions instead.
+const NAMES_INSIDE_WORDS = ["조국혁신당"];
+
 // Who a quote names. Relationships are built only from this: an operator
 // cannot declare that two people are connected, only record what was said.
-export function detectMentions(quote: string | null, speakerId: string, people: NameEntry[]): string[] {
-  if (!quote) return [];
+export function detectMentions(rawQuote: string | null, speakerId: string, people: NameEntry[]): string[] {
+  if (!rawQuote) return [];
+  const quote = NAMES_INSIDE_WORDS.reduce((text, word) => text.replaceAll(word, " ".repeat(word.length)), rawQuote);
   const found = new Set<string>();
   for (const person of people) {
     if (person.id === speakerId) continue;

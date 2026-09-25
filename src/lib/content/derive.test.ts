@@ -27,6 +27,12 @@ describe("detectMentions", () => {
     expect(detectMentions("이 문제는", "han-donghoon", people)).toEqual([]);
   });
 
+  test("a party named after a person is not a mention of them", () => {
+    const withCho = [...people, { id: "cho-kuk", name: "조국", aliases: [] }];
+    expect(detectMentions("조국혁신당과의 합당 제안은 멈춰 주십시오", "han-donghoon", withCho)).toEqual([]);
+    expect(detectMentions("조국혁신당 조국 대표에게 묻습니다", "han-donghoon", withCho)).toEqual(["cho-kuk"]);
+  });
+
   test("an action without a quote names no one", () => {
     expect(detectMentions(null, "han-donghoon", people)).toEqual([]);
   });
