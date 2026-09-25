@@ -1,7 +1,7 @@
 .deckArea { display: grid; gap: 14px; padding-top: 8px; }
 .progress { display: flex; align-items: center; gap: 10px; color: var(--smoke); font-size: 14px; font-variant-numeric: tabular-nums; }
 .progress button { border: 1px solid var(--stone); border-radius: var(--radius-pill); background: white; padding: 6px 12px; color: var(--graphite); font: inherit; font-size: 13px; cursor: pointer; }
-.progress button:first-of-type { margin-left: auto; }
+.progress button:first-of-type { margin-left: auto; padding: 6px 10px; }
 .progress button:disabled { opacity: .45; cursor: default; }
 .deck { position: relative; height: min(460px, 62vh); }
 .card { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px; overflow: hidden; border: 1px solid var(--stone); border-radius: var(--radius-card); background: white; padding: 18px; box-shadow: 0 8px 28px rgb(0 0 0 / 8%); touch-action: none; user-select: none; -webkit-user-select: none; transition: transform .18s ease-out; cursor: grab; }
@@ -39,4 +39,16 @@
 .review a { color: var(--graphite); }
 .actions { display: flex; gap: 14px; }
 .actions a { color: var(--graphite); font-size: 14px; font-weight: 700; }
-@media (prefers-reduced-motion: reduce) { .card, .leave_punch, .leave_cheer, .leave_unknown { transition: none; } }
+.pop { position: absolute; top: 42%; z-index: 10; font-size: 96px; line-height: 1; pointer-events: none; animation: popIn .7s ease-out forwards; }
+.pop_punch { left: 12%; }
+.pop_cheer { right: 12%; }
+@keyframes popIn {
+  0% { opacity: 0; transform: translateY(-50%) scale(.4); }
+  25% { opacity: 1; transform: translateY(-50%) scale(1.15); }
+  100% { opacity: 0; transform: translateY(-80%) scale(1); }
+}
+@keyframes popFade { 0%, 40% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .card, .leave_punch, .leave_cheer, .leave_unknown { transition: none; }
+  .pop { animation: popFade .7s ease-out forwards; transform: translateY(-50%); }
+}

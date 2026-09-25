@@ -122,7 +122,12 @@ export const recentlyPublished = unstable_cache(async (limit: number): Promise<R
   ].sort((left, right) => right.publishedAt.localeCompare(left.publishedAt)).slice(0, limit);
 }, ["archive", "recently-published"], CACHE);
 
-// World cup brackets (statements against statements, never people).
+// Every published statement, for world cups drawn at random.
+export const publishedStatements = unstable_cache(async (): Promise<StatementView[]> =>
+  (await published("statements").get()).docs.map(statement),
+["archive", "published-statements"], CACHE);
+
+// World cup brackets an operator picked (statements against statements).
 export const listBrackets = unstable_cache(async (): Promise<Bracket[]> =>
   (await published("brackets").get()).docs.map((snapshot) => authored("brackets", snapshot.data()!)).sort((left, right) => left.id.localeCompare(right.id)),
 ["archive", "brackets"], CACHE);

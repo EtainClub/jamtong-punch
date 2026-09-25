@@ -78,7 +78,7 @@ async function Profile({ person }: { person: PersonView }) {
         <Link className={styles.playPunch} href={`/people/${person.id}/play/punch`}>👊 펀치 게임</Link>
         <Link className={styles.playCheer} href={`/people/${person.id}/play/cheer`}>👏 응원 게임</Link>
       </div>
-      <StanceButtons kind="person" id={person.id} options={["punch", "cheer"]} note="게임을 하든 버튼을 누르든 오늘 이 인물에 대한 입장 1건으로 기록됩니다. 여러 번 해도 1건입니다." />
+      <StanceButtons kind="person" id={person.id} options={["punch", "cheer"]} note="게임 한 판이나 버튼 한 번이 오늘 이 인물에 대한 입장 1건입니다. 오늘 다시 하면 바뀔 뿐 늘지 않습니다." />
     </div>}
   </section>;
 }

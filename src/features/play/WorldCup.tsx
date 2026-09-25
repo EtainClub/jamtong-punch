@@ -7,15 +7,23 @@ import { firebaseJsonFetch } from "@/lib/firebase/api";
 import { useFirebaseAuth } from "@/lib/firebase/auth";
 import styles from "./worldcup.module.css";
 
-export type Contender = { id: string; speaker: string; headline: string; quote: string | null; date: string; sourceLabel: string | null; sourceHref: string | null };
+// A statement (speaker, headline, quote, source) or a person (name, role, photo).
+export type Contender = { id: string; title: string; subtitle: string; quote: string | null; imageUrl: string | null; sourceLabel: string | null; sourceHref: string | null };
 type Match = { round: number; leftId: string; rightId: string; winner: "left" | "right" };
 
 const roundName = (size: number) => (size === 2 ? "결승" : `${size}강`);
 
-// implementation-design 7.5: statements face each other in the operator's
-// bracket order (the server checks that exact shape), and the picks go to the
-// comparison ledger only, never to stances.
-export function WorldCup({ bracketId, question, contenders }: { bracketId: string; question: string; contenders: Contender[] }) {
+// implementation-design 7.5: entrants meet in the given order (the server
+// checks that exact shape), and the picks go to the comparison ledger only,
+// never to stances. A random draw (reshuffle) deals new entrants on replay.
+export function WorldCup({ bracketId, questionId, question, contenders, sharePath, reshuffle = false }: {
+  bracketId: string;
+  questionId?: string;
+  question: string;
+  contenders: Contender[];
+  sharePath: string;
+  reshuffle?: boolean;
+}) {
   const { user } = useFirebaseAuth();
   const byId = new Map(contenders.map((item) => [item.id, item]));
   const [field, setField] = useState(contenders.map((item) => item.id));
@@ -34,8 +42,8 @@ export function WorldCup({ bracketId, question, contenders }: { bracketId: strin
     if (!user) { setStatus("로그인을 준비하지 못해 결과를 기록하지 못했습니다."); return; }
     sessionId.current ??= crypto.randomUUID();
     try {
-      await firebaseJsonFetch(user, "/api/comparison", { method: "POST", body: JSON.stringify({ sessionId: sessionId.current, bracket: bracketId, matches: all }) });
-      setStatus("비교 결과를 기록했습니다. 이 결과는 인물 입장(펀치·응원) 수치에 들어가지 않습니다.");
+      await firebaseJsonFetch(user, "/api/comparison", { method: "POST", body: JSON.stringify({ sessionId: sessionId.current, bracket: bracketId, ...(questionId ? { question: questionId } : {}), matches: all }) });
+      setStatus("비교 결과를 기록했습니다. 이 결과는 펀치·응원 입장 수치에 들어가지 않습니다.");
     } catch {
       setStatus("결과를 기록하지 못했습니다. 잠시 뒤 다시 해 주세요.");
     }
@@ -43,8 +51,7 @@ export function WorldCup({ bracketId, question, contenders }: { bracketId: strin
 
   function pick(side: "left" | "right") {
     if (!left || !right || champion) return;
-    const match: Match = { round, leftId: left.id, rightId: right.id, winner: side };
-    const allMatches = [...matches, match];
+    const allMatches = [...matches, { round, leftId: left.id, rightId: right.id, winner: side }];
     const nextWinners = [...winners, side === "left" ? left.id : right.id];
     setMatches(allMatches);
     if (nextWinners.length * 2 < field.length) { setWinners(nextWinners); return; }
@@ -60,6 +67,7 @@ export function WorldCup({ bracketId, question, contenders }: { bracketId: strin
   }
 
   function restart() {
+    if (reshuffle) { window.location.reload(); return; }
     setField(contenders.map((item) => item.id));
     setWinners([]); setMatches([]); setRound(1); setChampion(null); setStatus(null);
     sessionId.current = null;
@@ -72,21 +80,21 @@ export function WorldCup({ bracketId, question, contenders }: { bracketId: strin
       <h1>내가 고른 1위</h1>
       <Card item={winner} />
       <p className={styles.recorded}>{status}</p>
-      <p className={styles.help}>이것은 나의 비교 기록입니다. 지지율이나 여론조사 결과가 아닙니다.</p>
+      <p className={styles.help}>이것은 나의 비교 기록입니다. 지지율이나 여론조사 결과가 아니고, 임통은 이 결과로 순위를 공개하지 않습니다.</p>
       <ol className={styles.path}>{matches.map((match, index) => {
         const won = byId.get(match.winner === "left" ? match.leftId : match.rightId)!;
         const lost = byId.get(match.winner === "left" ? match.rightId : match.leftId)!;
-        return <li key={index}><span>{match.round}라운드</span> <b>{won.speaker} · {won.headline}</b> <small>vs {lost.speaker} · {lost.headline}</small></li>;
+        return <li key={index}><span>{roundName(Math.max(2, (contenders.length) / 2 ** (match.round - 1)))}</span> <b>{won.title}</b> <small>vs {lost.title}</small></li>;
       })}</ol>
       <div className={styles.actions}>
-        <button onClick={restart} type="button">다시 하기</button>
-        <ShareButton path={`/play/worldcup/${bracketId}`} title={`임통 월드컵 · ${question}`} />
+        <button onClick={restart} type="button">{reshuffle ? "새 대진으로 다시" : "다시 하기"}</button>
+        <ShareButton path={sharePath} title={`임통 월드컵 · ${question}`} />
         <Link href="/play">다른 게임</Link>
       </div>
     </section>;
   }
 
-  return <section className={styles.game} aria-label="언행 월드컵">
+  return <section className={styles.game} aria-label="월드컵">
     <p className={styles.round}>{roundName(field.length)} · {winners.length + 1} / {field.length / 2}</p>
     <h1 className={styles.question}>{question}</h1>
     <div className={styles.pair} role="group" aria-label="둘 중 하나를 고르세요">
@@ -94,15 +102,17 @@ export function WorldCup({ bracketId, question, contenders }: { bracketId: strin
       <span className={styles.vs} aria-hidden="true">VS</span>
       {right && <button className={styles.choice} onClick={() => pick("right")} type="button"><Card item={right} /></button>}
     </div>
-    <p className={styles.help}>카드를 눌러 고릅니다. 출처는 고르기 전에 새 창으로 확인할 수 있습니다.</p>
-    <div className={styles.sources}>{[left, right].map((item) => item?.sourceHref && <a key={item.id} href={item.sourceHref} target="_blank" rel="noreferrer">{item.speaker} 출처: {item.sourceLabel}</a>)}</div>
+    <p className={styles.help}>카드를 눌러 고릅니다.{left?.sourceHref ? " 출처는 고르기 전에 새 창으로 확인할 수 있습니다." : ""}</p>
+    <div className={styles.sources}>{[left, right].map((item) => item?.sourceHref && <a key={item.id} href={item.sourceHref} target="_blank" rel="noreferrer">{item.title} 출처: {item.sourceLabel}</a>)}</div>
   </section>;
 }
 
 function Card({ item }: { item: Contender }) {
   return <span className={styles.card}>
-    <small>{item.speaker} · {item.date}</small>
-    <strong>{item.headline}</strong>
+    {item.imageUrl
+      // eslint-disable-next-line @next/next/no-img-element
+      ? <span className={styles.person}><img src={item.imageUrl} alt="" /><span><strong>{item.title}</strong><small>{item.subtitle}</small></span></span>
+      : <><small>{item.subtitle}</small><strong>{item.title}</strong></>}
     {item.quote && <q>{item.quote}</q>}
   </span>;
 }

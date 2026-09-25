@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import type { Stance } from "@/lib/domain";
 import { useFirebaseAuth } from "@/lib/firebase/auth";
 import { submitStances, type StanceEntry } from "./participation";
+import { playStance, saveSoundPreference, soundPreference } from "./sound";
 import styles from "./swipe.module.css";
 
 export type SwipeCard = {
@@ -13,7 +14,7 @@ export type SwipeCard = {
   name: string;
   subtitle: string;
   imageUrl: string | null;
-  line: string;
+  line: string | null;
   quote: string | null;
   sourceLabel: string | null;
   sourceHref: string | null;
@@ -31,6 +32,9 @@ const DIRECTIONS: Record<Stance, { x: number; y: number; icon: string }> = {
 
 type Choice = { card: SwipeCard; stance: Stance; dwellMs: number };
 
+// What flashes over the deck as a card leaves. "Don't know" gets a sound only.
+const POPS: Partial<Record<Stance, string>> = { punch: "👊", cheer: "❤️" };
+
 export function SwipeDeck({ cards }: { cards: SwipeCard[] }) {
   const { user } = useFirebaseAuth();
   const [index, setIndex] = useState(0);
@@ -39,6 +43,8 @@ export function SwipeDeck({ cards }: { cards: SwipeCard[] }) {
   const [leaving, setLeaving] = useState<Stance | null>(null);
   const [done, setDone] = useState<{ message: string } | null>(null);
   const [sending, setSending] = useState(false);
+  const [sound, setSound] = useState(false);
+  const [pop, setPop] = useState<{ id: number; stance: Stance } | null>(null);
   const session = useRef({ id: "", startedAt: "" });
   const shownAt = useRef(0);
   const drag = useRef<{ x: number; y: number; id: number } | null>(null);
@@ -47,7 +53,16 @@ export function SwipeDeck({ cards }: { cards: SwipeCard[] }) {
   useEffect(() => {
     session.current = { id: crypto.randomUUID(), startedAt: new Date().toISOString() };
     shownAt.current = performance.now();
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timeout = window.setTimeout(() => setSound(soundPreference() && !reduced), 0);
+    return () => window.clearTimeout(timeout);
   }, []);
+
+  function toggleSound() {
+    const next = !sound;
+    setSound(next);
+    saveSoundPreference(next);
+  }
 
   async function finish(final: Choice[]) {
     setDone({ message: "기록하는 중…" });
@@ -71,6 +86,12 @@ export function SwipeDeck({ cards }: { cards: SwipeCard[] }) {
     const choice = { card: cards[index], stance, dwellMs: performance.now() - shownAt.current };
     const next = [...choices, choice];
     setLeaving(stance);
+    if (sound) playStance(stance);
+    if (POPS[stance]) {
+      const id = Date.now();
+      setPop({ id, stance });
+      window.setTimeout(() => setPop((current) => (current?.id === id ? null : current)), 700);
+    }
     window.setTimeout(() => {
       setLeaving(null);
       setChoices(next);
@@ -130,15 +151,16 @@ export function SwipeDeck({ cards }: { cards: SwipeCard[] }) {
       <p className={styles.tally}><span>👊 펀치 <b>{counts.punch}</b></span><span>👏 응원 <b>{counts.cheer}</b></span><span>🤷 잘 모름 <b>{counts.unknown}</b></span></p>
       <p className={styles.recorded}>{done.message}</p>
       <p className={styles.help}>카드 하나에 입장 1건입니다. 오늘 같은 대상에 다시 입장을 내면 바뀔 뿐 늘지 않습니다.</p>
-      <ul className={styles.review}>{choices.map((choice) => <li key={choice.card.id}><span>{DIRECTIONS[choice.stance].icon}</span><Link href={choice.card.href}>{choice.card.kind === "person" ? choice.card.name : `${choice.card.name} · ${choice.card.line}`}</Link></li>)}</ul>
+      <ul className={styles.review}>{choices.map((choice) => <li key={choice.card.id}><span>{DIRECTIONS[choice.stance].icon}</span><Link href={choice.card.href}>{choice.card.kind === "person" || !choice.card.line ? choice.card.name : `${choice.card.name} · ${choice.card.line}`}</Link></li>)}</ul>
       <div className={styles.actions}><Link href="/play">다른 게임</Link><Link href="/">홈으로</Link></div>
     </section>;
   }
 
   const visible = cards.slice(index, index + 3);
   return <section className={styles.deckArea} aria-label="카드 훑어보기">
-    <div className={styles.progress}><span>{index + 1} / {cards.length}</span><button onClick={undo} disabled={undoUsed || !choices.length || sending} type="button">↶ 되돌리기{undoUsed ? " (사용함)" : ""}</button><button onClick={() => void finish(choices)} disabled={sending} type="button">끝내기</button></div>
+    <div className={styles.progress}><span>{index + 1} / {cards.length}</span><button onClick={toggleSound} type="button" aria-pressed={sound} aria-label={sound ? "효과음 끄기" : "효과음 켜기"}>{sound ? "🔊" : "🔈"}</button><button onClick={undo} disabled={undoUsed || !choices.length || sending} type="button">↶ 되돌리기{undoUsed ? " (사용함)" : ""}</button><button onClick={() => void finish(choices)} disabled={sending} type="button">끝내기</button></div>
     <div className={styles.deck}>
+      {pop && <span key={pop.id} className={`${styles.pop} ${styles[`pop_${pop.stance}`]}`} aria-hidden="true">{POPS[pop.stance]}</span>}
       {visible.map((card, depth) => {
         const isTop = depth === 0;
         return <article key={card.id} ref={isTop ? top : undefined} className={`${styles.card} ${isTop && leaving ? styles[`leave_${leaving}`] : ""}`} style={{ zIndex: 3 - depth, transform: isTop ? undefined : `translateY(${depth * 10}px) scale(${1 - depth * 0.04})` }}
@@ -150,7 +172,7 @@ export function SwipeDeck({ cards }: { cards: SwipeCard[] }) {
             {card.imageUrl ? <img src={card.imageUrl} alt="" draggable={false} /> : <span className={styles.initial} aria-hidden="true">{card.name.slice(0, 1)}</span>}
             <div><h2>{card.name}</h2><small>{card.subtitle}</small></div>
           </div>
-          <p className={styles.line}>{card.line}</p>
+          {card.line && <p className={styles.line}>{card.line}</p>}
           {card.quote && <blockquote>“{card.quote}”</blockquote>}
           {card.sourceHref && <a href={card.sourceHref} target="_blank" rel="noreferrer">{card.sourceLabel}</a>}
           <span className={styles.stamp} aria-hidden="true" />
@@ -162,6 +184,6 @@ export function SwipeDeck({ cards }: { cards: SwipeCard[] }) {
       <button className={styles.unknown} onClick={() => choose("unknown")} type="button">🤷 잘 모름<small>↑ 위</small></button>
       <button className={styles.cheer} onClick={() => choose("cheer")} type="button">👏 응원<small>→ 오른쪽</small></button>
     </div>
-    <p className={styles.help}>카드를 밀거나 버튼·방향키로 고릅니다. 모르는 대상은 &lsquo;잘 모름&rsquo;으로 넘기세요. 그것도 기록입니다. 마치면 넘긴 카드마다 입장 1건이 기록됩니다.</p>
+    <p className={styles.help}>카드를 밀거나 버튼·방향키로 고릅니다. 모르는 대상은 &lsquo;잘 모름&rsquo;으로 넘기세요. 그것도 기록입니다. 마치면 넘긴 카드마다 입장 1건이 기록되고, 오늘 이미 입장을 낸 대상은 이번 선택으로 바뀝니다.</p>
   </section>;
 }

@@ -28,7 +28,8 @@
 .cell { position: relative; aspect-ratio: 1; border-radius: 16px; background: var(--stone); }
 .face { position: absolute; inset: 4%; overflow: hidden; border: 0; border-radius: 50%; background: white; padding: 0; cursor: pointer; animation: pop .12s ease-out; }
 .face img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-.mark { position: absolute; font-size: clamp(14px, 5vw, 26px); pointer-events: none; }
+.mark { position: absolute; font-size: clamp(16px, 5.5vw, 30px); pointer-events: none; animation: stamp .14s ease-out; }
+.heart { position: absolute; font-size: clamp(16px, 5.5vw, 30px); pointer-events: none; transform: translate(-50%, -50%); animation: heart 1.6s ease-out forwards; }
 .burst { position: absolute; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; animation: burst .55s ease-out forwards; }
 .burst_punch { box-shadow: 0 0 0 4px var(--burgundy), 18px -14px 0 -2px var(--burgundy), -16px -12px 0 -2px var(--burgundy), 14px 16px 0 -3px var(--burgundy), -18px 12px 0 -3px var(--burgundy); }
 .burst_cheer { box-shadow: 0 0 0 4px var(--navy), 18px -14px 0 -2px #d4a72c, -16px -12px 0 -2px var(--navy), 14px 16px 0 -3px #d4a72c, -18px 12px 0 -3px var(--navy); }
@@ -45,6 +46,14 @@
 @keyframes pop { from { transform: scale(.7); } to { transform: scale(1); } }
 @keyframes burst { from { opacity: 1; transform: translate(-50%, -50%) scale(.4); } to { opacity: 0; transform: translate(-50%, -50%) scale(2.4); } }
 @keyframes flash { from { opacity: .28; } to { opacity: 0; } }
+@keyframes stamp { from { scale: 1.8; opacity: .4; } to { scale: 1; opacity: 1; } }
+@keyframes heart {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.5); }
+  12% { opacity: 1; transform: translate(-50%, -60%) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -260%) scale(.9); }
+}
+@keyframes heartFade { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .face, .burst, .flash { animation: none; }
+  .face, .burst, .flash, .mark { animation: none; }
+  .heart { animation: heartFade 1.6s ease-out forwards; }
 }

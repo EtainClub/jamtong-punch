@@ -18,3 +18,25 @@
 .brackets a { display: flex; justify-content: space-between; border: 1px solid var(--stone); border-radius: 14px; background: white; padding: 14px 16px; color: var(--ink); font-weight: 800; text-decoration: none; }
 .brackets small { color: var(--smoke); }
 .empty { color: var(--smoke) !important; }
+.games { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.game { display: grid; align-content: start; gap: 8px; height: 100%; border: 1px solid var(--stone); border-radius: var(--radius-card); background: white; padding: 18px; color: var(--ink); text-decoration: none; transition: border-color .12s, transform .12s; }
+.game:hover, .game:focus-visible { border-color: var(--ink); }
+.game:active { transform: scale(.98); }
+.game strong { font-size: 19px; letter-spacing: -.03em; }
+.game > span:last-child { color: var(--smoke); font-size: 14px; line-height: 1.5; }
+.icon { font-size: 34px; line-height: 1; }
+.tone_punch { border-top: 4px solid var(--burgundy); }
+.tone_cheer { border-top: 4px solid var(--navy); }
+.tone_neutral { border-top: 4px solid var(--ash); }
+.rules { margin-top: 28px; border-radius: 16px; background: var(--taupe); padding: 18px 20px; }
+.rules h2 { margin: 0 0 10px; font-size: 17px; }
+.rules ul { display: grid; gap: 8px; margin: 0; padding-left: 18px; color: var(--graphite); font-size: 14px; line-height: 1.55; }
+.who { display: grid; gap: 2px; min-width: 0; }
+.who small { overflow: hidden; color: var(--smoke); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.eyebrow a { color: inherit; }
+.questions { display: grid; gap: 10px; margin: 20px 0 0; padding: 0; list-style: none; }
+.questions a { display: flex; justify-content: space-between; border: 1px solid var(--stone); border-radius: 16px; background: white; padding: 18px; color: var(--ink); font-size: 18px; font-weight: 800; text-decoration: none; }
+.questions a:hover { border-color: var(--ink); }
+.note { font-size: 13px !important; }
+@media (max-width: 420px) { .games { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .game { transition: none; } }

@@ -1,44 +1,33 @@
 import { Timestamp } from "firebase-admin/firestore";
-import { requirePublishedBracket, requirePublishedStatement } from "@/lib/content/store";
+import { requirePublishedBracket, requirePublishedStatement, requirePublishedTargets } from "@/lib/content/store";
 import { db } from "@/lib/firebase/admin";
-import type { ComparisonInput } from "@/lib/comparison/schema";
+import { BRACKET_SIZES, entrantsOf, validateProgression } from "@/lib/comparison/progression";
+import { AUTO_BRACKETS, type ComparisonInput } from "@/lib/comparison/schema";
 
-type ExpectedMatch = { round: number; leftId: string; rightId: string };
+type Resolved = { id: string; question: string; kind: "statement" | "person" };
 
-function expectedMatch(state: string[], round: number): ExpectedMatch[] {
-  return state.reduce<ExpectedMatch[]>((matches, leftId, index) => {
-    if (index % 2 === 0) matches.push({ round, leftId, rightId: state[index + 1] });
-    return matches;
-  }, []);
-}
-
-async function validateBracket(input: ComparisonInput) {
+async function resolveBracket(input: ComparisonInput): Promise<Resolved> {
+  const auto = AUTO_BRACKETS[input.bracket as keyof typeof AUTO_BRACKETS];
+  if (auto) {
+    // A random draw: the entrants are whatever the first round names, so each
+    // must be public (and a person playable), distinct, and 8 or 16 of them.
+    const entrants = entrantsOf(input.matches);
+    if (!BRACKET_SIZES.includes(entrants.length) || new Set(entrants).size !== entrants.length) throw new Error("invalid-bracket-size");
+    if (!input.question || !(auto.questions as readonly string[]).includes(input.question)) throw new Error("invalid-bracket-question");
+    await requirePublishedTargets(entrants.map((slug) => ({ kind: auto.kind, slug })));
+    validateProgression(entrants, input.matches);
+    return { id: input.bracket, question: input.question, kind: auto.kind };
+  }
   const bracket = await requirePublishedBracket(input.bracket);
   for (const id of bracket.statementIds) await requirePublishedStatement(id);
-  let contenders = [...bracket.statementIds];
-  let cursor = 0;
-  let round = 1;
-  while (contenders.length > 1) {
-    const expected = expectedMatch(contenders, round);
-    const received = input.matches.slice(cursor, cursor + expected.length);
-    if (received.length !== expected.length) throw new Error("incomplete-bracket");
-    const next: string[] = [];
-    for (let index = 0; index < expected.length; index += 1) {
-      const match = received[index];
-      const shape = expected[index];
-      if (match.round !== shape.round || match.leftId !== shape.leftId || match.rightId !== shape.rightId) throw new Error("invalid-bracket-match");
-      next.push(match.winner === "left" ? match.leftId : match.rightId);
-    }
-    cursor += expected.length;
-    contenders = next;
-    round += 1;
-  }
-  if (cursor !== input.matches.length) throw new Error("invalid-bracket-match-count");
-  return bracket;
+  validateProgression(bracket.statementIds, input.matches);
+  return { id: bracket.id, question: bracket.questionId, kind: "statement" };
 }
 
+// Picks go to the comparison ledger only, never to stances: a 16-entrant
+// bracket must not move anyone's punch/cheer ratio 16 times.
 export async function submitComparison(uid: string, input: ComparisonInput) {
-  const bracket = await validateBracket(input);
+  const bracket = await resolveBracket(input);
   const marker = db.doc(`users/${uid}/sessions/${input.sessionId}`);
   return db.runTransaction(async (tx) => {
     const previous = await tx.get(marker);
@@ -46,7 +35,8 @@ export async function submitComparison(uid: string, input: ComparisonInput) {
     const createdAt = Timestamp.now();
     input.matches.forEach((match, index) => tx.create(db.doc(`users/${uid}/comparisons/${input.sessionId}_${index}`), {
       bracket: bracket.id,
-      question: bracket.questionId,
+      question: bracket.question,
+      kind: bracket.kind,
       ...match,
       createdAt,
     }));

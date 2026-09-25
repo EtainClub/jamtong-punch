@@ -23,10 +23,13 @@ type Mark = { id: number; x: number; y: number; rotate: number };
 type Burst = { id: number; x: number; y: number };
 type Outcome = { hits: number; bestCombo: number; recorded: string };
 
+// Punches pile up on the face for the session; cheer hearts float up and fade
+// so the face stays visible.
 const COPY: Record<Mode, { verb: string; icon: string; marks: string[] }> = {
-  punch: { verb: "때리기", icon: "👊", marks: ["💥", "💢", "✴️"] },
-  cheer: { verb: "응원하기", icon: "👏", marks: ["✨", "⭐", "💫"] },
+  punch: { verb: "때리기", icon: "👊", marks: ["👊"] },
+  cheer: { verb: "응원하기", icon: "👏", marks: ["❤️", "💖", "💕"] },
 };
+const HEART_MS = 1600;
 
 export function ReflexGame({ person, mode, header, backHref }: {
   person: { id: string; name: string; imageUrl: string };
@@ -159,6 +162,7 @@ export function ReflexGame({ person, mode, header, backHref }: {
     const id = nextId.current++;
     // Marks stay on the face for the session only; nothing is saved or sent.
     setMarks((current) => [...current.slice(-(MAX_MARKS - 1)), { id, x, y, rotate: Math.round(Math.random() * 60 - 30) }]);
+    if (mode === "cheer") window.setTimeout(() => setMarks((current) => current.filter((mark) => mark.id !== id)), HEART_MS);
     if (!reducedMotion.current) {
       setFlash(id);
       board.current?.animate([{ transform: "translate(0, 0)" }, { transform: `translate(${Math.random() > 0.5 ? 6 : -6}px, 3px)` }, { transform: "translate(-4px, -2px)" }, { transform: "translate(0, 0)" }], { duration: 160 });
@@ -192,7 +196,7 @@ export function ReflexGame({ person, mode, header, backHref }: {
       {headerCard}
       <div className={styles.contract}>
         <p><b>이 화면은 나만 봅니다.</b> 저장·공유되지 않고, 화면을 닫으면 흔적도 사라집니다.</p>
-        <p><b>오늘 이 인물에 대한 입장 1건이 기록됩니다.</b> 몇 번을 치든 1건입니다.</p>
+        <p><b>게임이 끝나면 오늘 {person.name}에 대한 입장 1건({STANCE_LABELS[mode]})이 기록됩니다.</b> 몇 번을 치든 1건이고, 오늘 다시 하면 새로 쌓이지 않고 바뀝니다.</p>
         {today && <p className={styles.notice}>오늘 이미 {STANCE_LABELS[today.s]}(으)로 기록했습니다. 이번 게임을 마치면 {STANCE_LABELS[mode]}(으)로 바뀝니다.</p>}
       </div>
       <p className={styles.help}>얼굴이 옮겨 다닙니다. 맞힐수록 빨라지고, 시간 제한은 없습니다. 20초 동안 치지 않으면 끝납니다.</p>
@@ -211,7 +215,7 @@ export function ReflexGame({ person, mode, header, backHref }: {
         <p><span>최고 연타</span><b>{outcome?.bestCombo ?? 0}</b></p>
       </div>
       <p className={styles.recorded}>{error ?? outcome?.recorded ?? "기록하는 중…"}</p>
-      <p className={styles.help}>점수는 기록되는 입장의 무게를 바꾸지 않습니다. 1번 쳐도, 300번 쳐도 1건입니다.</p>
+      <p className={styles.help}>점수는 나만 보는 기록입니다. 1번을 치든 300번을 치든 남는 입장은 1건입니다.</p>
       <div className={styles.actions}>
         <button className={`${styles.primary} ${styles[mode]}`} onClick={start} type="button">다시 하기</button>
         <Link href={backHref}>{person.name} 기록 보기</Link>
@@ -234,7 +238,9 @@ export function ReflexGame({ person, mode, header, backHref }: {
           {/* The original photo is shown as is; effects are overlays that never touch the file. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={person.imageUrl} alt="" draggable={false} />
-          {marks.map((mark) => <span key={mark.id} className={styles.mark} style={{ left: `${mark.x * 100}%`, top: `${mark.y * 100}%`, transform: `translate(-50%, -50%) rotate(${mark.rotate}deg)` }} aria-hidden="true">{copy.marks[mark.id % copy.marks.length]}</span>)}
+          {marks.map((mark) => mode === "punch"
+            ? <span key={mark.id} className={styles.mark} style={{ left: `${mark.x * 100}%`, top: `${mark.y * 100}%`, transform: `translate(-50%, -50%) rotate(${mark.rotate}deg)` }} aria-hidden="true">{copy.marks[0]}</span>
+            : <span key={mark.id} className={styles.heart} style={{ left: `${mark.x * 100}%`, top: `${mark.y * 100}%` }} aria-hidden="true">{copy.marks[mark.id % copy.marks.length]}</span>)}
           {bursts.map((burst) => <span key={burst.id} className={`${styles.burst} ${styles[`burst_${mode}`]}`} style={{ left: `${burst.x * 100}%`, top: `${burst.y * 100}%` }} aria-hidden="true" />)}
         </button>}
       </div>)}

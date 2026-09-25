@@ -1,47 +1,35 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Avatar, SiteHeader } from "@/features/archive/components";
-import { QUESTIONS } from "@/features/play/questions";
+import { SiteHeader } from "@/features/archive/components";
+import { PlayRules } from "@/features/play/PlayRules";
 import styles from "@/features/play/hub.module.css";
-import { listBrackets, listPeople } from "@/lib/archive/read";
 import { shareMetadata } from "@/lib/site";
 
-export const dynamic = "force-dynamic";
-export const metadata: Metadata = shareMetadata("게임", "펀치·응원 게임, 카드 훑어보기, 언행 월드컵. 게임은 나만 보고, 기록되는 입장은 대상마다 하루 1건입니다.");
+export const metadata: Metadata = shareMetadata("게임", "펀치·응원, 카드 훑어보기, 언행 월드컵, 인물 월드컵. 게임은 나만 보고, 기록되는 입장은 대상마다 하루 1건입니다.");
 
-export default async function PlayPage() {
-  const [people, brackets] = await Promise.all([listPeople(), listBrackets()]);
-  const playable = people.filter((person) => person.playable);
+const GAMES = [
+  { href: "/play/reflex", icon: "👊", title: "펀치 · 응원", text: "한 사람을 골라 옮겨 다니는 얼굴을 치거나 응원합니다. 시간 제한 없이, 맞힐수록 빨라집니다.", tone: "punch" },
+  { href: "/play/swipe", icon: "🃏", title: "카드 훑어보기", text: "인물과 언행 카드를 넘기며 펀치·응원·잘 모름을 고릅니다. 카드마다 출처가 붙어 있습니다.", tone: "neutral" },
+  { href: "/play/worldcup/statements", icon: "🗯️", title: "언행 월드컵", text: "언행끼리 겨룹니다. 어느 쪽이 더 문제인지, 더 시급한지 골라 1위까지 올라갑니다.", tone: "neutral" },
+  { href: "/play/worldcup/people", icon: "🏆", title: "인물 월드컵", text: "두 사람 중 더 펀치하고 싶은, 또는 더 응원하고 싶은 사람을 골라 1위까지 올라갑니다.", tone: "cheer" },
+] as const;
+
+export default function PlayPage() {
   return <>
     <SiteHeader current="play" />
     <main className={styles.shell}>
       <section className={styles.hero}>
         <p className={styles.eyebrow}>임통 · 게임</p>
-        <h1>시원하게 치고,<br />입장은 1건만.</h1>
-        <p>게임 화면은 나만 봅니다. 몇 번을 치든 오늘 한 대상에 대한 입장은 1건으로 기록되고, 모든 게임은 버튼 하나로 같은 입장을 남기는 길과 같은 무게입니다.</p>
+        <h1>무엇을 할까요?</h1>
       </section>
-
-      <section className={styles.section} aria-labelledby="reflex-title">
-        <h2 id="reflex-title">펀치 · 응원</h2>
-        <p>한 사람을 골라 얼굴이 옮겨 다니는 판에서 치거나 응원합니다. 시간 제한은 없고, 맞힐수록 빨라집니다.</p>
-        {playable.length ? <ul className={styles.people}>{playable.map((person) => <li key={person.id}>
-          <Avatar person={person} size={56} />
-          <span>{person.name}</span>
-          <span className={styles.modes}><Link className={styles.punch} href={`/people/${person.id}/play/punch`}>👊 펀치</Link><Link className={styles.cheer} href={`/people/${person.id}/play/cheer`}>👏 응원</Link></span>
-        </li>)}</ul> : <p className={styles.empty}>게임에 쓸 수 있는 인물이 아직 없습니다.</p>}
-      </section>
-
-      <section className={styles.section} aria-labelledby="swipe-title">
-        <h2 id="swipe-title">훑어보기</h2>
-        <p>인물과 언행 카드를 최대 25장 넘기며 펀치·응원·잘 모름을 고릅니다. 카드마다 대표 기록과 출처가 붙어 있습니다.</p>
-        <Link className={styles.cta} href="/play/swipe">카드 넘기기 →</Link>
-      </section>
-
-      <section className={styles.section} aria-labelledby="worldcup-title">
-        <h2 id="worldcup-title">언행 월드컵</h2>
-        <p>사람이 아니라 언행끼리 겨룹니다. 결과는 나의 비교 기록일 뿐 지지율이 아닙니다.</p>
-        {brackets.length ? <ul className={styles.brackets}>{brackets.map((bracket) => <li key={bracket.id}><Link href={`/play/worldcup/${bracket.id}`}>{QUESTIONS[bracket.questionId]} <small>{bracket.statementIds.length}강</small></Link></li>)}</ul> : <p className={styles.empty}>열린 월드컵이 아직 없습니다.</p>}
-      </section>
+      <ul className={styles.games}>{GAMES.map((game) => <li key={game.href}>
+        <Link className={`${styles.game} ${styles[`tone_${game.tone}`]}`} href={game.href}>
+          <span className={styles.icon} aria-hidden="true">{game.icon}</span>
+          <strong>{game.title}</strong>
+          <span>{game.text}</span>
+        </Link>
+      </li>)}</ul>
+      <PlayRules />
     </main>
   </>;
 }
