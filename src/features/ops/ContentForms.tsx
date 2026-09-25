@@ -146,6 +146,8 @@ export type FormProps = {
   refs: Refs;
   isNew: boolean;
   image: { uploading: boolean; onFile: (file: File) => void };
+  // A source created from the form (YouTube quick start) joins the lists.
+  addSource?: (source: Draft) => void;
 };
 
 export function ContentForm(props: FormProps) {
@@ -211,10 +213,64 @@ function PersonForm({ draft, update, refs, isNew, image: upload }: FormProps) {
   </>;
 }
 
-function StatementForm({ draft, update, refs }: FormProps) {
+type YoutubeMeta = { videoId: string; title: string | null; channel: string | null; publishedAt: string | null; durationSec: number | null; description: string | null; partial: boolean };
+
+// "Start from a YouTube link": one address creates (or finds) the source and
+// fills what a draft can take from it. The description stays on screen,
+// because broadcasters often transcribe the quote there.
+function YoutubeQuickStart({ onReady }: { onReady: (source: Draft, meta: YoutubeMeta) => void }) {
+  const { user } = useFirebaseAuth();
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ meta: YoutubeMeta; created: boolean } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  async function start() {
+    if (!user) return;
+    setBusy(true); setError(null);
+    try {
+      const response = await accountJsonFetch<{ source: Draft; meta: YoutubeMeta; created: boolean }>(user, "/api/ops/sources/from-youtube", { method: "POST", body: JSON.stringify({ url }) });
+      onReady(response.source, response.meta);
+      setResult({ meta: response.meta, created: response.created });
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "영상 정보를 가져오지 못했습니다."); }
+    finally { setBusy(false); }
+  }
+  return <fieldset className={`${styles.wide} ${styles.quickStart}`}><legend>유튜브 링크로 시작 <em className={styles.optional}>선택</em></legend>
+    <p className={styles.help}>영상 주소를 넣으면 출처를 만들고(이미 있으면 그대로 쓰고) 근거 구간·날짜·맥락을 채웁니다. 발언 원문과 요약은 직접 확인해 적습니다.</p>
+    <div className={styles.row}><input type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://www.youtube.com/shorts/…" /><button className={styles.secondary} onClick={() => void start()} disabled={busy || !youtubeVideoId(url)} type="button">{busy ? "가져오는 중…" : "가져오기"}</button></div>
+    {error && <p className={styles.error}>{error}</p>}
+    {result && <>
+      <p className={styles.help} aria-live="polite">{result.created ? "출처를 새로 만들었습니다." : "이미 등록된 출처를 썼습니다."} {result.meta.partial ? "영상 페이지를 읽지 못해 제목·채널만 가져왔습니다. 날짜와 구간은 직접 확인해 주세요." : `${result.meta.channel ?? ""} · ${result.meta.publishedAt ?? "날짜 모름"} 게시 · ${result.meta.durationSec ? formatTimecode(result.meta.durationSec) : "길이 모름"}`}</p>
+      {result.meta.description && <details className={styles.description} open><summary>영상 설명란 — 방송사가 정리한 발언이 있으면 원문과 구간 원문에 옮기세요</summary><pre>{result.meta.description}</pre></details>}
+    </>}
+  </fieldset>;
+}
+
+// What a draft takes from the video: the source with the whole video as the
+// segment (narrow it to the remark), the publish date as an estimate, and a
+// first line of context naming where it came from.
+function fromVideo(source: Draft, meta: YoutubeMeta, draft: Draft) {
+  const citation: Citation = { ...emptyCitation(), sourceId: source.id, startSec: 0, endSec: meta.durationSec };
+  const context = str(draft.context) || `${str(source.publisher)} 영상(${str(source.publishedAt)} 게시)에서 가져왔다. 발언일은 게시일로 추정했다.`;
+  return {
+    citation,
+    patch: {
+      ...(meta.publishedAt ? { occurredAt: meta.publishedAt, datePrecision: "day", dateCertainty: "estimated" } : {}),
+      context,
+    },
+  };
+}
+
+function StatementForm({ draft, update, refs, addSource }: FormProps) {
   const kind = str(draft.kind);
   const speaker = str(draft.personId);
+  function applyVideo(source: Draft, meta: YoutubeMeta) {
+    addSource?.(source);
+    const { citation, patch } = fromVideo(source, meta, draft);
+    const citations = list<Citation>(draft.citations).filter((item) => item.sourceId && item.sourceId !== source.id);
+    update({ ...patch, citations: [citation, ...citations] });
+  }
   return <>
+    <YoutubeQuickStart onReady={applyVideo} />
     <Field label="화자" required><Select value={speaker} onChange={(personId) => update({ personId })} choices={toChoices(people(refs))} placeholder="인물을 고르세요" /></Field>
     <Field label="종류" required><Select value={kind} onChange={(next) => update({ kind: next })} choices={statementKinds} /></Field>
     <DateFields draft={draft} update={update} />
@@ -246,13 +302,19 @@ function DetectedMentions({ draft, update, refs }: Pick<FormProps, "draft" | "up
   </fieldset>;
 }
 
-function EvaluationForm({ draft, update, refs }: FormProps) {
+function EvaluationForm({ draft, update, refs, addSource }: FormProps) {
   const target = str(draft.targetPersonId);
+  function applyVideo(source: Draft, meta: YoutubeMeta) {
+    addSource?.(source);
+    const { citation, patch } = fromVideo(source, meta, draft);
+    update({ ...patch, citation, format: "video" });
+  }
   const evaluator = (draft.evaluator ?? { personId: null, name: "", descriptor: "" }) as { personId: string | null; name: string; descriptor: string };
   const [external, setExternal] = useState(evaluator.personId === null && evaluator.name !== "");
   const setEvaluator = (patch: Partial<typeof evaluator>) => update({ evaluator: { ...evaluator, ...patch } });
   const format = str(draft.format);
   return <>
+    <YoutubeQuickStart onReady={applyVideo} />
     <Field label="평가 대상" required><Select value={target} onChange={(targetPersonId) => update({ targetPersonId, respondsTo: null })} choices={toChoices(people(refs))} placeholder="인물을 고르세요" /></Field>
     <Field label="형식" required><Select value={format} onChange={(next) => update({ format: next })} choices={evaluationFormats} /></Field>
     <fieldset className={styles.wide}><legend>평가자 <b className={styles.required}>필수</b></legend>
@@ -337,9 +399,15 @@ function SourceForm({ draft, update, isNew }: FormProps) {
     if (!user || !video) return;
     setBusy("lookup"); setMessage(null);
     try {
-      const found = await accountJsonFetch<{ title: string | null; channel: string | null }>(user, `/api/ops/sources/lookup?videoId=${video.videoId}`);
-      update({ ...(found.title ? { title: found.title } : {}), ...(found.channel ? { publisher: found.channel } : {}) });
-      setMessage("제목과 채널을 채웠습니다. 게시일과 영상 길이는 직접 확인해 넣어 주세요.");
+      const found = await accountJsonFetch<YoutubeMeta>(user, `/api/ops/sources/lookup?videoId=${video.videoId}`);
+      update({
+        ...(found.title ? { title: found.title } : {}),
+        ...(found.channel ? { publisher: found.channel } : {}),
+        ...(found.publishedAt ? { publishedAt: found.publishedAt } : {}),
+        ...(found.description && !str(draft.description) ? { description: found.description } : {}),
+        video: { ...video, durationSec: found.durationSec ?? video.durationSec },
+      });
+      setMessage(found.partial ? "제목과 채널만 가져왔습니다. 게시일, 영상 길이, 설명란은 직접 넣어 주세요." : "제목, 채널, 게시일, 영상 길이, 설명란을 채웠습니다. 원본과 맞는지 확인해 주세요.");
     } catch (cause) { setMessage(cause instanceof Error ? cause.message : "영상 정보를 가져오지 못했습니다."); }
     finally { setBusy(null); }
   }
@@ -355,7 +423,7 @@ function SourceForm({ draft, update, isNew }: FormProps) {
   }
   return <>
     <Field label="URL" required wide hint="유튜브 주소를 넣으면 영상 ID가 채워지고, 제목·채널을 가져올 수 있습니다"><input type="url" value={str(draft.url)} onChange={(event) => changeUrl(event.target.value)} placeholder="https://" /></Field>
-    {video && <div className={styles.wide}><button className={styles.secondary} onClick={() => void lookup()} disabled={busy !== null} type="button">{busy === "lookup" ? "가져오는 중…" : "영상 제목·채널 가져오기"}</button></div>}
+    {video && <div className={styles.wide}><button className={styles.secondary} onClick={() => void lookup()} disabled={busy !== null} type="button">{busy === "lookup" ? "가져오는 중…" : "영상 정보 가져오기"}</button></div>}
     <Field label="종류" required><Select value={kind} onChange={(next) => update({ kind: next, ...(next === "video" || next === "broadcast" ? {} : { video: null }) })} choices={sourceKinds} /></Field>
     <Field label="발행일" required><input type="date" value={str(draft.publishedAt)} onChange={(event) => update({ publishedAt: event.target.value })} /></Field>
     <Field label="제목" required><input value={str(draft.title)} onChange={(event) => update({ title: event.target.value })} /></Field>

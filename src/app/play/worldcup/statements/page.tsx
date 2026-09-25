@@ -46,7 +46,7 @@ export default async function StatementWorldCupPage({ searchParams }: Props) {
   return <>
     <SiteHeader current="play" />
     <main className={styles.shell}>
-      <WorldCup bracketId={BRACKET} questionId={question} question={QUESTIONS[question]} contenders={drawn.map((statement) => statementContender(statement, names, sources))} sharePath={`/play/worldcup/statements?q=${question}`} reshuffle />
+      <WorldCup bracketId={BRACKET} questionId={question} question={QUESTIONS[question]} contenders={drawn.map((statement) => statementContender(statement, names, sources))} resultKind="statements" reshuffle />
     </main>
   </>;
 }

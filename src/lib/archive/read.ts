@@ -127,6 +127,11 @@ export const publishedStatements = unstable_cache(async (): Promise<StatementVie
   (await published("statements").get()).docs.map(statement),
 ["archive", "published-statements"], CACHE);
 
+// Every published evaluation, for search.
+export const publishedEvaluations = unstable_cache(async (): Promise<EvaluationView[]> =>
+  (await published("evaluations").get()).docs.map(evaluation),
+["archive", "published-evaluations"], CACHE);
+
 // World cup brackets an operator picked (statements against statements).
 export const listBrackets = unstable_cache(async (): Promise<Bracket[]> =>
   (await published("brackets").get()).docs.map((snapshot) => authored("brackets", snapshot.data()!)).sort((left, right) => left.id.localeCompare(right.id)),

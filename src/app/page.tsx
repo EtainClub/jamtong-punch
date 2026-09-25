@@ -27,6 +27,7 @@ export default async function Home() {
         <p>누가 어떤 말을 해왔는지, 다른 사람들은 그를 어떻게 평가했는지, 누구를 언급해 왔는지. 모든 카드는 원자료로 끝납니다. 임통은 인물을 규정하지 않습니다.</p>
       </section>
       <PeopleSearch people={people.map((person) => ({ id: person.id, name: person.name, aliases: person.aliases, role: currentRole(person) }))} />
+      <p className={styles.searchMore}><Link href="/search">발언·시선까지 찾으려면 검색 →</Link></p>
 
       <section className={styles.section} aria-labelledby="people-title">
         <div className={styles.sectionHead}><h2 id="people-title">인물</h2><Link href="/people">전체 보기</Link></div>

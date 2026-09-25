@@ -15,12 +15,13 @@ import styles from "./archive.module.css";
 export type Names = Record<string, string>;
 export type Sources = Record<string, SourceView>;
 
-export function SiteHeader({ current }: { current?: "people" | "topics" | "play" }) {
+export function SiteHeader({ current }: { current?: "people" | "topics" | "play" | "search" }) {
   return <header className={styles.siteHeader}><nav aria-label="주요 메뉴">
     <Link className={styles.brand} href="/"><Image src="/brand/logo.png" alt="임통" width={100} height={40} priority /></Link>
     <Link href="/people" aria-current={current === "people" ? "page" : undefined}>인물</Link>
     <Link href="/topics" aria-current={current === "topics" ? "page" : undefined}>쟁점</Link>
     <Link href="/play" aria-current={current === "play" ? "page" : undefined}>게임</Link>
+    <Link href="/search" aria-current={current === "search" ? "page" : undefined} aria-label="검색" className={styles.searchLink}>검색</Link>
     <AccountMenu />
   </nav></header>;
 }

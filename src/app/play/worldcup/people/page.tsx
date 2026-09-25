@@ -41,7 +41,7 @@ export default async function PeopleWorldCupPage({ searchParams }: Props) {
   return <>
     <SiteHeader current="play" />
     <main className={styles.shell}>
-      <WorldCup bracketId={BRACKET} questionId={question} question={QUESTIONS[question]} contenders={drawn.map((person) => personContender(person, currentRole(person)))} sharePath={`/play/worldcup/people?q=${question}`} reshuffle />
+      <WorldCup bracketId={BRACKET} questionId={question} question={QUESTIONS[question]} contenders={drawn.map((person) => personContender(person, currentRole(person)))} resultKind="people" reshuffle />
     </main>
   </>;
 }

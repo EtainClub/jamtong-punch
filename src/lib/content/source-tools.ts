@@ -3,14 +3,6 @@
 
 const USER_AGENT = "imtong-source-tools/1.0";
 
-export async function lookupYoutube(videoId: string) {
-  const url = `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`;
-  const response = await fetch(url, { headers: { "user-agent": USER_AGENT }, signal: AbortSignal.timeout(15_000) });
-  if (!response.ok) throw new Error(`youtube lookup failed: ${response.status}`);
-  const data = await response.json() as { title?: string; author_name?: string };
-  return { title: data.title ?? null, channel: data.author_name ?? null };
-}
-
 // Internet Archive "Save Page Now". The capture finishes asynchronously on
 // their side; a successful request answers with the address of the snapshot.
 export async function requestWaybackCapture(target: string): Promise<string> {

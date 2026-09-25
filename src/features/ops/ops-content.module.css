@@ -32,3 +32,14 @@
 .duplicates { margin: 18px 0 0; border-radius: 8px; background: #fff7e0; padding: 10px 14px 10px 30px; color: #7a5200; font-size: 13px; line-height: 1.6; }
 .footerLeft { display: flex; gap: 8px; }
 .editor footer .secondary { border: 1px solid var(--stone); background: white; color: var(--graphite); }
+.quickStart { border-style: dashed !important; background: var(--taupe); }
+.quickStart .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.quickStart input { width: 100%; border: 1px solid var(--stone); border-radius: 10px; background: white; padding: 10px; font: inherit; }
+.description { margin-top: 8px; }
+.description summary { color: var(--graphite); font-size: 13px; font-weight: 700; cursor: pointer; }
+.description pre { max-height: 260px; overflow: auto; margin: 8px 0 0; border-radius: 10px; background: white; padding: 12px; font: 13px/1.6 inherit; white-space: pre-wrap; }
+.guide { margin-top: 20px; border: 1px solid var(--stone); border-radius: 14px; background: white; padding: 14px 18px; }
+.guide summary { font-weight: 800; cursor: pointer; }
+.guide > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px 24px; margin-top: 10px; }
+.guide h3 { margin: 10px 0 4px; font-size: 15px; }
+.guide ul { display: grid; gap: 6px; margin: 0; padding-left: 18px; color: var(--graphite); font-size: 14px; line-height: 1.55; }

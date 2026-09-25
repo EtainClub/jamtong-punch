@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ShareButton } from "@/features/archive/ShareButton";
 import { firebaseJsonFetch } from "@/lib/firebase/api";
 import { useFirebaseAuth } from "@/lib/firebase/auth";
+import { resultPath, type ResultKind } from "./questions";
 import { playPick, saveSoundPreference, soundPreference, type PickTone } from "./sound";
 import styles from "./worldcup.module.css";
 
@@ -28,12 +29,13 @@ const PICK_MS = 420;
 // implementation-design 7.5: entrants meet in the given order (the server
 // checks that exact shape), and the picks go to the comparison ledger only,
 // never to stances. A random draw (reshuffle) deals new entrants on replay.
-export function WorldCup({ bracketId, questionId, question, contenders, sharePath, reshuffle = false }: {
+export function WorldCup({ bracketId, questionId, question, contenders, resultKind, reshuffle = false }: {
   bracketId: string;
-  questionId?: string;
+  questionId: string;
   question: string;
   contenders: Contender[];
-  sharePath: string;
+  // Sharing the result links to its own page (one winner, no face in the preview).
+  resultKind: ResultKind;
   reshuffle?: boolean;
 }) {
   const { user } = useFirebaseAuth();
@@ -48,7 +50,7 @@ export function WorldCup({ bracketId, questionId, question, contenders, sharePat
   const [picked, setPicked] = useState<{ side: "left" | "right"; key: number } | null>(null);
   const sessionId = useRef<string | null>(null);
   const pickCount = useRef(0);
-  const fx = PICK_FX[questionId ?? ""] ?? { emoji: "✔️", tone: "pick" as const };
+  const fx = PICK_FX[questionId] ?? { emoji: "✔️", tone: "pick" as const };
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setSound(soundPreference()), 0);
@@ -69,7 +71,7 @@ export function WorldCup({ bracketId, questionId, question, contenders, sharePat
     if (!user) { setStatus("로그인을 준비하지 못해 결과를 기록하지 못했습니다."); return; }
     sessionId.current ??= crypto.randomUUID();
     try {
-      await firebaseJsonFetch(user, "/api/comparison", { method: "POST", body: JSON.stringify({ sessionId: sessionId.current, bracket: bracketId, ...(questionId ? { question: questionId } : {}), matches: all }) });
+      await firebaseJsonFetch(user, "/api/comparison", { method: "POST", body: JSON.stringify({ sessionId: sessionId.current, bracket: bracketId, question: questionId, matches: all }) });
       setStatus("비교 결과를 기록했습니다. 이 결과는 펀치·응원 입장 수치에 들어가지 않습니다.");
     } catch {
       setStatus("결과를 기록하지 못했습니다. 잠시 뒤 다시 해 주세요.");
@@ -124,7 +126,7 @@ export function WorldCup({ bracketId, questionId, question, contenders, sharePat
       })}</ol>
       <div className={styles.actions}>
         <button onClick={restart} type="button">{reshuffle ? "새 대진으로 다시" : "다시 하기"}</button>
-        <ShareButton path={sharePath} title={`임통 월드컵 · ${question}`} />
+        <ShareButton path={resultPath(resultKind, questionId, champion)} title={`임통 월드컵 · ${question} 내가 고른 1위: ${winner.title}`} />
         <Link href="/play">다른 게임</Link>
       </div>
     </section>;

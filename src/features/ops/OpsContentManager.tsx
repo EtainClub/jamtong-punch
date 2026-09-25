@@ -6,6 +6,7 @@ import { accountFormFetch, accountJsonFetch } from "@/lib/firebase/api";
 import { signInWithGoogle, useFirebaseAuth } from "@/lib/firebase/auth";
 import { contentTypes, emptyDraft, findDuplicates, itemLabel, type ContentType, type Draft } from "./content-form";
 import { ContentForm, EditorRoleProvider, Field, type Refs } from "./ContentForms";
+import { ContributorGuide } from "./ContributorGuide";
 import styles from "./ops-content.module.css";
 
 const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -124,6 +125,7 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
 
   const update = useCallback((patch: Record<string, unknown>) => setDraft((current) => ({ ...current, ...patch })), []);
+  const addSource = useCallback((source: Draft) => setRefs((current) => (current.sources.some((item) => item.id === source.id) ? current : { ...current, sources: [...current.sources, source] })), []);
   function open(nextType: ContentType, item: Draft | null) {
     setType(nextType); setSelectedId(item?.id ?? ""); setDraft(item ?? emptyDraft(nextType)); setFormKey((key) => key + 1); setNotice(null);
   }
@@ -225,6 +227,7 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
           ? <><b className={styles.required}>검토 대기</b> 항목을 확인해 공개하세요. 공개하면 블록체인에 지문이 기록되어 되돌릴 수 없습니다.</>
           : <>필수 항목을 채워 &lsquo;검토 요청&rsquo;으로 저장하면 운영자가 확인한 뒤 공개합니다. 공개 전까지는 언제든 고칠 수 있고, 공개된 기록에는 &lsquo;등록: {profile.nickname}&rsquo;으로 표시됩니다.</>}</span>
       </header>
+      {!asOps && <ContributorGuide />}
       <div className={styles.tabs}>{visibleTypes.map(([key, name]) => <button key={key} className={key === type ? styles.active : ""} onClick={() => open(key, null)} type="button">{name}{attentionCount(key) > 0 && <small className={styles.reviewCount}>{asOps ? "검토" : "반려"} {attentionCount(key)}</small>}</button>)}</div>
       <section className={styles.layout}>
         <aside className={styles.sidebar}><div className={styles.sidebarHead}><strong>{asOps ? typeName : `내 ${typeName}`}</strong><button onClick={() => void load()} disabled={loading} type="button">새로고침</button></div>{loadError ? <p className={styles.error}>{loadError}</p> : items.length ? <ul>{[...items].sort((left, right) => Number(right.status === attention) - Number(left.status === attention)).map((item) => <li key={item.id}><button onClick={() => open(type, item)} className={item.id === selectedId ? styles.selected : ""} type="button"><b>{itemLabel(type, item, names)}</b><small className={item.status === "review" || item.status === "rejected" ? styles.reviewLabel : undefined}>{STATUS_LABELS[String(item.status)] ?? String(item.publisher ?? "")}</small></button></li>)}</ul> : <p>{asOps ? "아직 등록된 항목이 없습니다." : "아직 등록한 항목이 없습니다. 오른쪽에서 새로 등록하세요."}</p>}</aside>
@@ -234,7 +237,7 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
           {rejection && <div className={styles.rejection}><strong>{draft.status === "rejected" ? "반려됨" : "이전 반려 사유"}</strong><p>{rejection.note}</p><small>{new Date(rejection.at).toLocaleString("ko-KR")}</small></div>}
           <div className={styles.form}>
             {type !== "people" && <Field label="문서 ID" hint="자동 생성됨"><output>{draft.id}</output></Field>}
-            <ContentForm key={formKey} type={type} draft={draft} update={update} refs={refs} isNew={!selectedId} image={{ uploading, onFile: (file) => void uploadImage(file) }} />
+            <ContentForm key={formKey} type={type} draft={draft} update={update} refs={refs} isNew={!selectedId} image={{ uploading, onFile: (file) => void uploadImage(file) }} addSource={addSource} />
           </div>
           {duplicates.length > 0 && <ul className={styles.duplicates}>{duplicates.map((message) => <li key={message}>{message}</li>)}</ul>}
           {notice && <p className={notice.ok ? styles.success : styles.error}>{notice.text}</p>}

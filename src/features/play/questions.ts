@@ -8,3 +8,8 @@ export const QUESTIONS: Record<(typeof QUESTION_IDS)[number], string> = {
   "more-punch": "더 펀치하고 싶은 사람은?",
   "more-cheer": "더 응원하고 싶은 사람은?",
 };
+
+export type ResultKind = "statements" | "people";
+
+// Where a shared world cup result lives (see features/play/result.ts).
+export const resultPath = (kind: ResultKind, question: string, winner: string) => `/play/worldcup/result/${kind}/${question}/${winner}`;

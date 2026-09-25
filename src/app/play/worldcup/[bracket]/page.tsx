@@ -30,7 +30,7 @@ export default async function BracketPage({ params }: Props) {
   return <>
     <SiteHeader current="play" />
     <main className={styles.shell}>
-      <WorldCup bracketId={bracket.id} questionId={bracket.questionId} question={QUESTIONS[bracket.questionId]} contenders={statements.map((statement) => statementContender(statement, names, sources))} sharePath={`/play/worldcup/${bracket.id}`} />
+      <WorldCup bracketId={bracket.id} questionId={bracket.questionId} question={QUESTIONS[bracket.questionId]} contenders={statements.map((statement) => statementContender(statement, names, sources))} resultKind="statements" />
     </main>
   </>;
 }
