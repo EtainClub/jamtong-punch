@@ -55,7 +55,7 @@ export default async function SwipePage() {
   ];
 
   return <>
-    <SiteHeader />
+    <SiteHeader current="play" />
     <main className={styles.shell}>
       <SwipeDeck cards={shuffle(cards)} />
     </main>

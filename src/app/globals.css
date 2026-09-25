@@ -34,3 +34,9 @@ button { cursor: pointer; }
 }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 a { color: inherit; }
+
+/* Room for the phone tab bar (features/archive SiteHeader) so it never covers
+   the end of a page. */
+@media (max-width: 640px) {
+  body:has([data-bottom-nav]) { padding-bottom: calc(57px + env(safe-area-inset-bottom)); }
+}

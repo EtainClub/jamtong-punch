@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { VersionNotice } from "@/features/version/VersionNotice";
 import { FirebaseAuthProvider } from "@/lib/firebase/auth";
@@ -18,6 +18,10 @@ export const metadata: Metadata = {
   // iOS has no install prompt; "홈 화면에 추가" opens full screen with this.
   appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: "default" },
 };
+
+// viewport-fit=cover lets the phone tab bar reserve the home-indicator area
+// (env(safe-area-inset-bottom)) instead of floating above a blank strip.
+export const viewport: Viewport = { viewportFit: "cover", themeColor: "#fdfcfc" };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return <html lang="ko"><body><FirebaseAuthProvider>{children}</FirebaseAuthProvider><VersionNotice /></body></html>;

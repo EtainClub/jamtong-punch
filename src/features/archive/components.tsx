@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { Citation, Evaluation, Person } from "@/content/schema";
 import type { Credited, SourceView, StatementView } from "@/lib/archive/read";
 import { citationHref, citationLabel, evaluationFormatLabels, formatDate, formatShortDate, formatTimecode, statementKindLabels } from "@/lib/content/format";
@@ -15,15 +16,31 @@ import styles from "./archive.module.css";
 export type Names = Record<string, string>;
 export type Sources = Record<string, SourceView>;
 
-export function SiteHeader({ current }: { current?: "people" | "topics" | "play" | "search" }) {
-  return <header className={styles.siteHeader}><nav aria-label="주요 메뉴">
-    <Link className={styles.brand} href="/"><Image src="/brand/logo.png" alt="임통" width={100} height={40} priority /></Link>
-    <Link href="/people" aria-current={current === "people" ? "page" : undefined}>인물</Link>
-    <Link href="/topics" aria-current={current === "topics" ? "page" : undefined}>쟁점</Link>
-    <Link href="/play" aria-current={current === "play" ? "page" : undefined}>게임</Link>
-    <Link href="/search" aria-current={current === "search" ? "page" : undefined} aria-label="검색" className={styles.searchLink}>검색</Link>
-    <AccountMenu />
-  </nav></header>;
+type Section = "people" | "topics" | "play" | "search";
+
+// One list of sections, drawn as links in the top bar on wide screens and as
+// a tab bar at the bottom on phones (CSS picks which one shows).
+const SECTIONS: Array<{ key: Section; href: string; label: string; icon: ReactNode }> = [
+  { key: "people", href: "/people", label: "인물", icon: <path d="M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6M21 19v-1a4 4 0 0 0-3-3.87M16 4.13a3 3 0 0 1 0 5.74" /> },
+  { key: "topics", href: "/topics", label: "쟁점", icon: <path d="M5 9h14M5 15h14M10 3 8 21M16 3l-2 18" /> },
+  { key: "play", href: "/play", label: "게임", icon: <path d="M6 11h4M8 9v4M15 12h.01M18 10h.01M7.5 6h9A4.5 4.5 0 0 1 21 10.5v3a4.5 4.5 0 0 1-8 2.83L12 15l-1 1.33A4.5 4.5 0 0 1 3 13.5v-3A4.5 4.5 0 0 1 7.5 6" /> },
+  { key: "search", href: "/search", label: "검색", icon: <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4" /> },
+];
+
+export function SiteHeader({ current }: { current?: Section }) {
+  return <>
+    <header className={styles.siteHeader}><nav aria-label="주요 메뉴">
+      <Link className={styles.brand} href="/"><Image src="/brand/logo.png" alt="임통" width={100} height={40} priority /></Link>
+      {SECTIONS.map((section) => <Link key={section.key} className={styles.topLink} href={section.href} aria-current={current === section.key ? "page" : undefined}>{section.label}</Link>)}
+      <AccountMenu />
+    </nav></header>
+    <nav className={styles.bottomNav} aria-label="주요 메뉴(하단)" data-bottom-nav>
+      {SECTIONS.map((section) => <Link key={section.key} href={section.href} aria-current={current === section.key ? "page" : undefined}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">{section.icon}</svg>
+        <span>{section.label}</span>
+      </Link>)}
+    </nav>
+  </>;
 }
 
 export function Avatar({ person, size }: { person: Pick<Person, "name" | "image">; size: number }) {

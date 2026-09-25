@@ -243,17 +243,15 @@
 .searchMore a { color: var(--navy); font-weight: 700; }
 /* Phones: every header item stays on one line; search shrinks to an icon. */
 .siteHeader nav a, .account a, .account button { white-space: nowrap; }
-@media (max-width: 480px) {
-  .siteHeader nav { gap: 9px; }
-  .siteHeader nav a:not(.brand) { font-size: 13px; }
-  .siteHeader nav a.searchLink { font-size: 0; }
-  .siteHeader nav a.searchLink::before { content: "🔍"; font-size: 15px; }
-  .brand img { width: 72px; height: auto; }
-  .account { gap: 8px; }
-}
-@media (max-width: 400px) {
-  .siteHeader nav { gap: 7px; padding: 6px 8px; }
-  .brand img { width: 62px; }
-  .account { gap: 6px; }
-  .account button { padding: 5px 7px; font-size: 12px; }
+
+/* Phones: the section links leave the top bar (logo and account stay) and
+   become a tab bar fixed to the bottom, clear of the home indicator. */
+.bottomNav { display: none; }
+@media (max-width: 640px) {
+  .topLink { display: none; }
+  .bottomNav { position: fixed; right: 0; bottom: 0; left: 0; z-index: 20; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--stone); background: color-mix(in srgb, var(--eggshell) 94%, transparent); padding-bottom: env(safe-area-inset-bottom); backdrop-filter: blur(10px); }
+  .bottomNav a { display: grid; justify-items: center; gap: 2px; min-height: 56px; padding: 8px 0 6px; color: var(--smoke); font-size: 11px; font-weight: 700; text-decoration: none; }
+  .bottomNav svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .bottomNav a[aria-current="page"] { color: var(--ink); }
+  .bottomNav a[aria-current="page"] svg { stroke-width: 2.4; }
 }

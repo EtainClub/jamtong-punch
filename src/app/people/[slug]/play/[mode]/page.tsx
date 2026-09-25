@@ -38,7 +38,7 @@ export default async function ReflexPage({ params }: Props) {
   } : null;
 
   return <>
-    <SiteHeader />
+    <SiteHeader current="play" />
     <main className={styles.shell}>
       <ReflexGame person={{ id: person.id, name: person.name, imageUrl: person.image.path }} mode={mode as Mode} header={header} backHref={`/people/${person.id}`} />
     </main>
