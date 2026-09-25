@@ -3,13 +3,14 @@ import { CONTENT_TAG } from "@/lib/archive/read";
 import { checkSources } from "@/lib/content/check-sources";
 import { verifyCron } from "@/lib/guard/cron";
 import { refusalResponse } from "@/lib/guard/refusal";
+import { recordCronRun } from "@/lib/ops/cron-runs";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
     await verifyCron(req);
-    const result = await checkSources();
+    const result = await recordCronRun("sources", checkSources);
     // A deleted source changes what the public card shows (the kept transcript
     // takes over), so the content cache is expired when anything changed.
     if (result.changed) revalidateTag(CONTENT_TAG, { expire: 0 });

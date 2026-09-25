@@ -9,6 +9,9 @@ env:
   - variable: NEXT_PUBLIC_SITE_URL
     value: https://im.jamtong.kr
     availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_CONTACT_EMAIL
+    value: etainclub@gmail.com
+    availability: [BUILD, RUNTIME]
   - variable: EXTRA_ALLOWED_ORIGINS
     value: https://jamtong-punch--jamtong-punch.asia-east1.hosted.app
     availability: [RUNTIME]

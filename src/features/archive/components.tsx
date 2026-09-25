@@ -6,6 +6,7 @@ import { citationHref, citationLabel, evaluationFormatLabels, formatDate, format
 import type { Stance } from "@/lib/domain";
 import { present } from "@/lib/stats/present";
 import { AccountMenu } from "./AccountMenu";
+import { ReportButton } from "./ReportButton";
 import { ShareButton } from "./ShareButton";
 import { StanceButtons } from "./StanceButtons";
 import { VideoEmbed } from "./VideoEmbed";
@@ -124,13 +125,15 @@ export function StatementCard({ statement, sources, names, topics, showSpeaker =
       {statement.contributor && <span className={styles.contributor}>등록: {statement.contributor}</span>}
       <Link className={styles.verifyLink} href={`/verify/statement/${statement.id}`}>⛓ 블록체인 대조</Link>
       <ShareButton path={`/statements/${statement.id}`} title={statement.headline} />
+      <ReportButton targetType="statement" targetId={statement.id} />
     </div>
     {statement.corrections.length > 0 && <details className={styles.context}><summary>정정 {statement.corrections.length}건</summary>{statement.corrections.map((item, index) => <p key={index}>{formatShortDate(item.at)} {item.note}</p>)}</details>}
     {stats && <Reaction id={statement.id} counts={stats[statement.id]} />}
   </article>;
 }
 
-export type StanceCounts = Record<Stance, number>;
+export type StanceCounts = Record<Stance, number> & { hidden?: boolean };
+export const RATIOS_HIDDEN_NOTE = "지금은 참여 수치를 공개하지 않습니다(선거 기간 등). 입장은 그대로 기록됩니다.";
 
 // Participants' punch/cheer on one statement, over the whole period. The
 // figure always travels with its sample size and the sample's nature.
@@ -138,7 +141,7 @@ function Reaction({ id, counts }: { id: string; counts?: StanceCounts }) {
   const figure = present(counts ?? { punch: 0, cheer: 0, unknown: 0 });
   return <div className={styles.reaction}>
     <StanceButtons kind="statement" id={id} options={["punch", "cheer", "unknown"]} note="언행에 대한 입장은 한 사람에 1건, 가장 최근 입장만 셉니다." />
-    <p className={styles.figure}>참여 {figure.n.toLocaleString("ko-KR")}명 · {figure.ratio === null ? "30명부터 비율을 표시합니다" : <b>펀치 {figure.ratio}%</b>} · 임통 참여자의 기록이며 여론조사가 아닙니다</p>
+    <p className={styles.figure}>{counts?.hidden ? RATIOS_HIDDEN_NOTE : <>참여 {figure.n.toLocaleString("ko-KR")}명 · {figure.ratio === null ? "30명부터 비율을 표시합니다" : <b>펀치 {figure.ratio}%</b>} · 임통 참여자의 기록이며 여론조사가 아닙니다</>}</p>
   </div>;
 }
 
@@ -176,6 +179,7 @@ export function EvaluationCard({ evaluation, sources, names, topics, responses =
       {evaluation.contributor && <span className={styles.contributor}>등록: {evaluation.contributor}</span>}
       <Link className={styles.verifyLink} href={`/verify/evaluation/${evaluation.id}`}>⛓ 블록체인 대조</Link>
       <ShareButton path={`/evaluations/${evaluation.id}`} title={evaluation.claim} />
+      <ReportButton targetType="evaluation" targetId={evaluation.id} />
     </div>
   </article>;
 }

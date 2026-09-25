@@ -23,7 +23,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:rules": "firebase emulators:exec --only firestore \"vitest run tests/firestore.rules.test.ts\"",
-    "test:backend": "FIREBASE_CONFIG='{\"projectId\":\"jamtong-punch-test\"}' firebase emulators:exec --project jamtong-punch-test --only firestore \"vitest run tests/rollup.emulator.test.ts tests/content.emulator.test.ts tests/participation.emulator.test.ts tests/anchor.emulator.test.ts tests/contributor.emulator.test.ts tests/comparison.emulator.test.ts\"",
+    "test:backend": "FIREBASE_CONFIG='{\"projectId\":\"jamtong-punch-test\"}' firebase emulators:exec --project jamtong-punch-test --only firestore \"vitest run tests/rollup.emulator.test.ts tests/content.emulator.test.ts tests/participation.emulator.test.ts tests/anchor.emulator.test.ts tests/contributor.emulator.test.ts tests/comparison.emulator.test.ts tests/account.emulator.test.ts tests/ops-health.emulator.test.ts\"",
     "check": "pnpm validate && pnpm typecheck && pnpm lint && pnpm test"
   },
   "dependencies": {

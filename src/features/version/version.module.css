@@ -5,3 +5,4 @@
 .banner button { border: 0; border-radius: var(--radius-pill); padding: 9px 16px; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
 .reload { background: white; color: var(--ink); }
 .later { background: transparent; color: rgb(255 255 255 / 75%); }
+.footer { gap: 14px; } .footer a { color: var(--smoke); }

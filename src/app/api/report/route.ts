@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   try {
     checkOrigin(req);
-    const { uid } = await verifyCaller(req);
+    const { uid } = await verifyCaller(req, { accountsSkipAppCheck: true });
     const parsed = reportSchema.safeParse(await req.json());
     if (!parsed.success) throw new Refusal(400, "invalid-body");
     return Response.json(await submitReport(uid, parsed.data));

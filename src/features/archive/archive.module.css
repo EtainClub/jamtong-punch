@@ -206,3 +206,25 @@
 .peopleGrid .personTile { flex: 1; min-width: 0; }
 .personTile > div { min-width: 0; }
 .personTile .tileRole { display: -webkit-box; overflow: hidden; min-height: calc(2 * 1.4em); line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.reportLink { border: 0; background: none; padding: 0; color: var(--ash); font: inherit; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.reportForm { display: grid; flex-basis: 100%; gap: 8px; margin-top: 6px; border-radius: 12px; background: var(--taupe); padding: 12px; font-size: 13px; }
+.reportForm label { display: grid; gap: 4px; color: var(--graphite); font-weight: 700; }
+.reportForm select, .reportForm textarea, .reportForm input { border: 1px solid var(--stone); border-radius: 8px; background: white; padding: 8px; font: inherit; font-weight: 400; }
+.reportForm textarea { min-height: 80px; resize: vertical; }
+.reportForm small { color: var(--smoke); font-weight: 400; }
+.reportForm div { display: flex; gap: 8px; }
+.reportForm button { border: 0; border-radius: var(--radius-pill); background: var(--ink); padding: 7px 14px; color: white; font: inherit; font-weight: 800; cursor: pointer; }
+.reportForm button:last-child { background: white; color: var(--graphite); }
+.reportForm button:disabled { opacity: .45; }
+.reportForm p { margin: 0; line-height: 1.5; }
+.reportError { color: var(--burgundy); }
+.about section { display: grid; gap: 10px; border-top: 1px solid var(--stone); padding: 24px 0; }
+.about h2 { margin: 0; font-size: 22px; letter-spacing: -.04em; }
+.about h3 { margin: 12px 0 0; font-size: 16px; }
+.about ul { display: grid; gap: 8px; margin: 0; padding-left: 18px; color: var(--graphite); line-height: 1.6; }
+.about p { margin: 0; color: var(--graphite); line-height: 1.6; }
+.small { color: var(--smoke) !important; font-size: 13px; }
+.myData { display: grid; gap: 8px; border-radius: 14px; background: var(--taupe); padding: 14px; }
+.myData div { display: flex; flex-wrap: wrap; gap: 8px; }
+.myData button { border: 1px solid var(--stone); border-radius: var(--radius-pill); background: white; padding: 8px 14px; color: var(--burgundy); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.myData button:disabled { opacity: .45; }

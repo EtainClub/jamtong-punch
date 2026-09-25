@@ -40,3 +40,14 @@
 .note { font-size: 13px !important; }
 @media (max-width: 420px) { .games { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .game { transition: none; } }
+/* One row per person at any width: photo and buttons keep their size, the
+   name/role column shrinks and truncates. */
+.people li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
+.people li > :first-child { flex-shrink: 0; }
+.who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modes { flex-shrink: 0; margin-left: 0; }
+.modes a { display: inline-flex; align-items: center; min-height: 40px; white-space: nowrap; }
+@media (max-width: 380px) {
+  .people li { gap: 8px; }
+  .modes a { padding: 8px 10px; font-size: 13px; }
+}

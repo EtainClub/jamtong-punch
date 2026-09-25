@@ -6,7 +6,7 @@ import { accountJsonFetch } from "@/lib/firebase/api";
 import { signInWithGoogle, signOutOfGoogle, useFirebaseAuth } from "@/lib/firebase/auth";
 import styles from "./archive.module.css";
 
-type Profile = { isOps: boolean; reviewCount: number; rejectedCount: number };
+type Profile = { isOps: boolean; reviewCount: number; rejectedCount: number; reportCount: number };
 
 // Anonymous visitors see a sign-in button; Google users get the contribution
 // page, operators also the CMS. Badges show work waiting for an operator and
@@ -40,7 +40,7 @@ export function AccountMenu() {
   }
   return <div className={styles.account}>
     <Link href="/contribute">등록하기{profile && profile.rejectedCount > 0 && <span className={styles.badge} title="반려된 등록물">{profile.rejectedCount}</span>}</Link>
-    {profile?.isOps && <Link href="/ops/content">운영{profile.reviewCount > 0 && <span className={styles.badge} title="검토 대기">{profile.reviewCount}</span>}</Link>}
+    {profile?.isOps && <Link href={profile.reviewCount === 0 && profile.reportCount > 0 ? "/ops/reports" : "/ops/content"}>운영{profile.reviewCount + profile.reportCount > 0 && <span className={styles.badge} title={`검토 대기 ${profile.reviewCount} · 처리할 신고 ${profile.reportCount}`}>{profile.reviewCount + profile.reportCount}</span>}</Link>}
     <button onClick={() => void run(async () => { setProfile(null); await signOutOfGoogle(); })} disabled={busy} type="button">로그아웃</button>
   </div>;
 }

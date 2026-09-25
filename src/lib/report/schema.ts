@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { REPORT_REASONS } from "./reasons";
 
 export const reportSchema = z.object({
-  targetType: z.enum(["person", "statement", "photo"]),
-  targetId: z.string().min(1).max(200),
-  reason: z.string().min(1).max(80),
-  detail: z.string().min(1).max(2_000),
+  targetType: z.enum(["person", "statement", "evaluation", "photo"]),
+  targetId: z.string().regex(/^[a-z0-9-]+$/).max(200),
+  reason: z.enum(REPORT_REASONS),
+  detail: z.string().trim().min(1).max(2_000),
   evidenceUrl: z.url().optional(),
 });
 

@@ -2,13 +2,14 @@ import { shareMetadata } from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Avatar, CitationLinks, currentRole, Empty, EvaluationCard, MoreLink, nameMap, SiteHeader, StatementTimeline, type Names, type Sources } from "@/features/archive/components";
+import { Avatar, CitationLinks, currentRole, Empty, EvaluationCard, MoreLink, nameMap, RATIOS_HIDDEN_NOTE, SiteHeader, StatementTimeline, type Names, type Sources } from "@/features/archive/components";
 import styles from "@/features/archive/archive.module.css";
 import { RelationsSection } from "@/features/archive/RelationsSection";
 import { getPerson, getSources, listPeople, listTopics, personEvaluations, personStatements, personTopicIds, sourceIdsOf, type PersonView, type StatementView } from "@/lib/archive/read";
 import { formatShortDate } from "@/lib/content/format";
 import { present } from "@/lib/stats/present";
-import { getPublicSubjectStats, getStatementStats } from "@/lib/stats/read";
+import { ReportButton } from "@/features/archive/ReportButton";
+import { getPublicSubjectStats, getRatioFlags, getStatementStats, ratioHidden } from "@/lib/stats/read";
 import { StanceButtons } from "@/features/archive/StanceButtons";
 import { OpsEditLink } from "@/features/archive/OpsEditLink";
 
@@ -60,7 +61,8 @@ export default async function PersonPage({ params, searchParams }: Props) {
 }
 
 async function Profile({ person }: { person: PersonView }) {
-  const stats = person.playable ? await getPublicSubjectStats(person.id) : null;
+  const hidden = ratioHidden(await getRatioFlags(), person.id);
+  const stats = person.playable && !hidden ? await getPublicSubjectStats(person.id) : null;
   const d30 = stats ? present({ punch: Number(stats.windows.d30.punch ?? 0), cheer: Number(stats.windows.d30.cheer ?? 0), unknown: Number(stats.windows.d30.unknown ?? 0) }) : null;
   return <section className={styles.profile} aria-labelledby="person-name">
     <Avatar person={person} size={112} />
@@ -68,9 +70,10 @@ async function Profile({ person }: { person: PersonView }) {
     <h1 id="person-name">{person.name}</h1>
     <p className={styles.roles}>{currentRole(person)}</p>
     <OpsEditLink type="people" id={person.id} label="인물 정보" />
+    <ReportButton targetType="person" targetId={person.id} hasPhoto={Boolean(person.image)} />
     <p className={styles.counts}><span>기록 <b>{person.counts.statements}</b></span><span>평가 <b>{person.counts.evaluationsReceived}</b></span><span>관계 <b>{person.counts.relations}</b></span></p>
     {person.playable && <div className={styles.participation}>
-      {d30 && d30.ratio !== null
+      {hidden ? <p>{RATIOS_HIDDEN_NOTE}</p> : d30 && d30.ratio !== null
         ? <p>30일 · 참여 {d30.n.toLocaleString("ko-KR")}명 · <span className={styles.punch}>펀치 {d30.ratio}%</span></p>
         : <p>30일 · 참여 {(d30?.n ?? 0).toLocaleString("ko-KR")}명 · 참여 30명부터 표시합니다</p>}
       <small>임통 참여자의 기록입니다. 일반 국민 여론이나 여론조사와 다릅니다.</small>

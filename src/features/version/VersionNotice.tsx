@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { APP_VERSION, isNewerVersion } from "@/lib/version";
 import styles from "./version.module.css";
@@ -37,7 +38,7 @@ export function VersionNotice() {
   }, []);
 
   return <>
-    <footer className={styles.footer}><span>임통 v{APP_VERSION}</span></footer>
+    <footer className={styles.footer}><Link href="/about">소개 · 개인정보처리방침</Link><span>임통 v{APP_VERSION}</span></footer>
     {latest && !dismissed && <div className={styles.banner} role="status">
       <p><b>새 버전 v{latest}이 나왔습니다.</b> 지금 화면은 v{APP_VERSION}입니다. 새로고침하면 최신 버전으로 바뀝니다.</p>
       <div>

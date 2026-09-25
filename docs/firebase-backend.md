@@ -1148,6 +1148,21 @@ CMS 최초 배포만 예외다. 등록 화면을 먼저 제공하기 위해 `pnp
 
 4번에서 하루 관찰하는 이유: enforce를 바로 켜면 App Check를 아직 못 붙인 클라이언트가 전부 막히고, 그게 배포 사고인지 공격인지 구분이 안 된다.
 
+### 운영 상태와 알림 (2026-09-26)
+
+- **실행 기록:** 예약 작업 5개(`rollup`·`anchors`·`expire`·`reconcile`·`sources`)는 실행마다 `system/cronRuns/jobs/{job}`에 마지막 성공·실패 시각과 오류를 남긴다(`lib/ops/cron-runs.ts`).
+  - 실패하면 `cron-failed {job}: …`를 ERROR로 로그에 남긴다.
+  - 블록체인 전송은 한 건이라도 실패하면 실패로 친다.
+- **`/ops/status`:** 다음 항목을 한 화면에 보인다.
+  - 작업별 상태: 정상, 지연(주기보다 오래 성공 없음), 실패, 기록 없음.
+  - 블록체인 전송 대기·실패 건수.
+  - 사라진 출처, 검토 대기, 처리할 신고.
+- **알림 (Cloud Monitoring):** 알림 규칙 `임통: 서버 오류 또는 예약 작업 실패`가 메일 채널 `etainclub@gmail.com`으로 보낸다.
+  - 조건: 로그 기반. Cloud Run `jamtong-punch`의 ERROR 로그 또는 Cloud Scheduler 작업 실패.
+  - 같은 알림은 1시간에 1번만 보낸다.
+  - 규칙과 채널은 콘솔 Monitoring → Alerting에서 고친다.
+- **알림으로 잡지 못하는 것:** 스케줄러가 멈춰서 작업이 아예 호출되지 않으면 오류 로그가 없어 알림이 오지 않는다. `/ops/status`의 '지연'으로만 보인다.
+
 ### 앱 버전 (2026-09-25)
 
 `package.json`의 `version`(x.y.z)이 앱 버전이다.
