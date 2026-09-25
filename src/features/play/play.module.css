@@ -1,0 +1,50 @@
+.shell { max-width: 560px; margin: 0 auto; padding: 16px 16px 80px; }
+.intro, .result { display: grid; gap: 16px; padding-top: 16px; }
+.intro h1, .result h1 { margin: 0; font-size: clamp(28px, 7vw, 40px); letter-spacing: -.05em; }
+.contract { display: grid; gap: 6px; border-radius: 14px; background: var(--taupe); padding: 14px 16px; }
+.contract p { margin: 0; color: var(--graphite); font-size: 15px; line-height: 1.55; }
+.notice { color: var(--pending) !important; font-weight: 700; }
+.help { margin: 0; color: var(--smoke); font-size: 13px; line-height: 1.55; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.actions a { color: var(--graphite); font-size: 14px; font-weight: 700; }
+.primary { min-height: 48px; border: 0; border-radius: var(--radius-pill); padding: 12px 26px; color: white; font: inherit; font-size: 17px; font-weight: 800; cursor: pointer; }
+.primary.punch { background: var(--burgundy); }
+.primary.cheer { background: var(--navy); }
+.primary:disabled { opacity: .45; cursor: default; }
+
+.headerCard { display: grid; gap: 4px; border: 1px solid var(--stone); border-radius: 14px; background: white; padding: 12px 14px; }
+.headerCard span { color: var(--smoke); font-size: 12px; font-weight: 800; letter-spacing: .06em; }
+.headerCard strong { font-size: 15px; line-height: 1.45; }
+.headerCard q { color: var(--graphite); font-size: 14px; line-height: 1.5; }
+.headerCard a { color: var(--navy); font-size: 13px; font-weight: 650; }
+
+.game { display: grid; gap: 12px; padding-top: 8px; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.hud { display: flex; align-items: center; gap: 14px; font-size: 18px; font-variant-numeric: tabular-nums; }
+.hud b { font-size: 26px; }
+.hud button { border: 1px solid var(--stone); border-radius: var(--radius-pill); background: white; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.hud button:first-of-type { margin-left: auto; }
+.hot { color: var(--burgundy); }
+.board { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow: hidden; border-radius: 20px; background: var(--taupe); padding: 8px; }
+.cell { position: relative; aspect-ratio: 1; border-radius: 16px; background: var(--stone); }
+.face { position: absolute; inset: 4%; overflow: hidden; border: 0; border-radius: 50%; background: white; padding: 0; cursor: pointer; animation: pop .12s ease-out; }
+.face img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.mark { position: absolute; font-size: clamp(14px, 5vw, 26px); pointer-events: none; }
+.burst { position: absolute; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; animation: burst .55s ease-out forwards; }
+.burst_punch { box-shadow: 0 0 0 4px var(--burgundy), 18px -14px 0 -2px var(--burgundy), -16px -12px 0 -2px var(--burgundy), 14px 16px 0 -3px var(--burgundy), -18px 12px 0 -3px var(--burgundy); }
+.burst_cheer { box-shadow: 0 0 0 4px var(--navy), 18px -14px 0 -2px #d4a72c, -16px -12px 0 -2px var(--navy), 14px 16px 0 -3px #d4a72c, -18px 12px 0 -3px var(--navy); }
+.flash { position: absolute; inset: 0; z-index: 2; pointer-events: none; animation: flash .18s ease-out forwards; }
+.flash_punch { background: var(--burgundy); }
+.flash_cheer { background: var(--navy); }
+
+.result .score { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.score p { display: grid; gap: 4px; margin: 0; border-radius: 14px; background: var(--taupe); padding: 14px; font-variant-numeric: tabular-nums; }
+.score span { color: var(--smoke); font-size: 12px; font-weight: 700; }
+.score b { font-size: 36px; letter-spacing: -.04em; }
+.recorded { margin: 0; border-left: 3px solid var(--ink); padding-left: 12px; font-size: 15px; font-weight: 700; line-height: 1.5; }
+
+@keyframes pop { from { transform: scale(.7); } to { transform: scale(1); } }
+@keyframes burst { from { opacity: 1; transform: translate(-50%, -50%) scale(.4); } to { opacity: 0; transform: translate(-50%, -50%) scale(2.4); } }
+@keyframes flash { from { opacity: .28; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .face, .burst, .flash { animation: none; }
+}

@@ -1,0 +1,27 @@
+.game, .result { display: grid; gap: 14px; padding-top: 12px; }
+.round { margin: 0; color: var(--smoke); font-size: 13px; font-weight: 800; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.question { margin: 0; font-size: clamp(24px, 6vw, 34px); letter-spacing: -.05em; }
+.result .question { color: var(--smoke); font-size: 15px; font-weight: 700; letter-spacing: 0; }
+.result h1 { margin: 0; font-size: 30px; letter-spacing: -.05em; }
+.pair { display: grid; gap: 10px; }
+.choice { border: 1px solid var(--stone); border-radius: var(--radius-card); background: white; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color .12s, transform .12s; }
+.choice:hover, .choice:focus-visible { border-color: var(--ink); }
+.choice:active { transform: scale(.98); }
+.vs { justify-self: center; color: var(--ash); font-size: 14px; font-weight: 900; letter-spacing: .1em; }
+.card { display: grid; gap: 8px; padding: 16px 18px; }
+.card small { color: var(--smoke); font-size: 13px; font-weight: 700; }
+.card strong { font-size: 18px; line-height: 1.45; letter-spacing: -.02em; }
+.card q { color: var(--graphite); font-size: 14px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.result .card { border: 2px solid var(--ink); border-radius: var(--radius-card); background: white; }
+.help { margin: 0; color: var(--smoke); font-size: 13px; line-height: 1.55; }
+.sources { display: grid; gap: 4px; }
+.sources a { color: var(--navy); font-size: 13px; font-weight: 650; }
+.recorded { margin: 0; border-left: 3px solid var(--ink); padding-left: 12px; font-weight: 700; line-height: 1.5; }
+.path { display: grid; gap: 6px; margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.5; }
+.path span { color: var(--smoke); font-size: 12px; }
+.path small { color: var(--smoke); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.actions button:first-child { border: 0; border-radius: var(--radius-pill); background: var(--ink); padding: 10px 20px; color: white; font: inherit; font-weight: 800; cursor: pointer; }
+.actions a { color: var(--graphite); font-size: 14px; font-weight: 700; }
+@media (min-width: 720px) { .pair { grid-template-columns: 1fr auto 1fr; align-items: stretch; } .vs { align-self: center; } }
+@media (prefers-reduced-motion: reduce) { .choice { transition: none; } }

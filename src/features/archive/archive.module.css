@@ -196,3 +196,7 @@
 .headline a:hover, .claim a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .shareButton { border: 1px solid var(--stone); border-radius: var(--radius-pill); background: white; padding: 3px 10px; color: var(--graphite); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 .published { margin: 0 0 6px; color: var(--smoke); font-size: 12px; }
+.playLinks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+.playLinks a { display: flex; min-height: 44px; align-items: center; justify-content: center; border-radius: 12px; color: white; font-size: 15px; font-weight: 800; text-decoration: none; }
+.playPunch { background: var(--burgundy); }
+.playCheer { background: var(--navy); }

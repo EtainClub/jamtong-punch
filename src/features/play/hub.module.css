@@ -1,0 +1,20 @@
+.shell { max-width: 592px; margin: 0 auto; padding: 0 16px 80px; }
+.hero { padding: 40px 0 20px; }
+.eyebrow { margin: 0 0 10px; color: var(--navy); font-size: 12px; font-weight: 800; letter-spacing: .12em; }
+.hero h1 { margin: 0; font-size: clamp(30px, 8vw, 44px); letter-spacing: -.06em; line-height: 1.12; }
+.hero p { margin: 14px 0 0; color: var(--smoke); line-height: 1.6; }
+.section { display: grid; gap: 10px; border-top: 1px solid var(--stone); padding: 24px 0; }
+.section h2 { margin: 0; font-size: 22px; letter-spacing: -.04em; }
+.section > p { margin: 0; color: var(--graphite); line-height: 1.55; }
+.people { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.people li { display: flex; align-items: center; gap: 12px; }
+.people li > span:nth-child(2) { font-weight: 800; }
+.modes { display: flex; gap: 6px; margin-left: auto; }
+.modes a { border-radius: var(--radius-pill); padding: 8px 12px; color: white; font-size: 14px; font-weight: 800; text-decoration: none; }
+.punch { background: var(--burgundy); }
+.cheer { background: var(--navy); }
+.cta { justify-self: start; border-radius: var(--radius-pill); background: var(--ink); padding: 11px 20px; color: white; font-weight: 800; text-decoration: none; }
+.brackets { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.brackets a { display: flex; justify-content: space-between; border: 1px solid var(--stone); border-radius: 14px; background: white; padding: 14px 16px; color: var(--ink); font-weight: 800; text-decoration: none; }
+.brackets small { color: var(--smoke); }
+.empty { color: var(--smoke) !important; }

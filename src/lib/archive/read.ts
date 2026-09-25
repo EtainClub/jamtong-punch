@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import type { Evaluation, Event, Person, Relationship, Source, SourceAvailability, Statement, Topic } from "@/content/schema";
+import type { Bracket, Evaluation, Event, Person, Relationship, Source, SourceAvailability, Statement, Topic } from "@/content/schema";
 import type { AnchorVersion } from "@/lib/anchor/versions";
 import { authored } from "@/lib/content/store";
 import { db } from "@/lib/firebase/admin";
@@ -121,6 +121,19 @@ export const recentlyPublished = unstable_cache(async (limit: number): Promise<R
     ...evaluations.docs.filter(isPublic).map((snapshot): RecentItem => ({ kind: "evaluation", publishedAt: at(snapshot), value: evaluation(snapshot) })),
   ].sort((left, right) => right.publishedAt.localeCompare(left.publishedAt)).slice(0, limit);
 }, ["archive", "recently-published"], CACHE);
+
+// World cup brackets (statements against statements, never people).
+export const listBrackets = unstable_cache(async (): Promise<Bracket[]> =>
+  (await published("brackets").get()).docs.map((snapshot) => authored("brackets", snapshot.data()!)).sort((left, right) => left.id.localeCompare(right.id)),
+["archive", "brackets"], CACHE);
+
+// A bracket's statements in bracket order; null if any of them is no longer
+// public, since the server only accepts complete, published brackets.
+export const bracketStatements = unstable_cache(async (ids: string[]): Promise<StatementView[] | null> => {
+  const snapshots = await db.getAll(...ids.map((id) => db.doc(`statements/${id}`)));
+  if (snapshots.some((snapshot) => !snapshot.exists || snapshot.get("status") !== "published")) return null;
+  return snapshots.map(statement);
+}, ["archive", "bracket-statements"], CACHE);
 
 // Every public page's id and last change, for the sitemap.
 export const publishedIndex = unstable_cache(async () => {

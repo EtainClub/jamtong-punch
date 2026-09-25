@@ -74,7 +74,11 @@ async function Profile({ person }: { person: PersonView }) {
         ? <p>30일 · 참여 {d30.n.toLocaleString("ko-KR")}명 · <span className={styles.punch}>펀치 {d30.ratio}%</span></p>
         : <p>30일 · 참여 {(d30?.n ?? 0).toLocaleString("ko-KR")}명 · 참여 30명부터 표시합니다</p>}
       <small>임통 참여자의 기록입니다. 일반 국민 여론이나 여론조사와 다릅니다.</small>
-      <StanceButtons kind="person" id={person.id} options={["punch", "cheer"]} note="오늘 이 인물에 대한 입장 1건으로 기록됩니다. 여러 번 눌러도 1건입니다." />
+      <div className={styles.playLinks}>
+        <Link className={styles.playPunch} href={`/people/${person.id}/play/punch`}>👊 펀치 게임</Link>
+        <Link className={styles.playCheer} href={`/people/${person.id}/play/cheer`}>👏 응원 게임</Link>
+      </div>
+      <StanceButtons kind="person" id={person.id} options={["punch", "cheer"]} note="게임을 하든 버튼을 누르든 오늘 이 인물에 대한 입장 1건으로 기록됩니다. 여러 번 해도 1건입니다." />
     </div>}
   </section>;
 }

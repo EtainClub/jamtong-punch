@@ -15,7 +15,5 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     title: person.name,
     subtitle: currentRole(person),
     footer: `언행 ${statements} · 시선 ${evaluationsReceived} · 관계 ${relations}`,
-    // Only rights-cleared photos, as on the page itself.
-    imageUrl: person.image?.rightsStatus === "cleared" ? person.image.path : null,
   });
 }

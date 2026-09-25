@@ -29,12 +29,12 @@ type Card = {
   // A plain line under the title (a person's role), not a quotation.
   subtitle?: string | null;
   footer?: string | null;
-  imageUrl?: string | null;
 };
 
 // One layout for every shared page: what it is, the headline, an optional
 // quote, and the site. Colors are globals.css tokens (eggshell, ink, burgundy, graphite, smoke).
-export async function ogCard({ eyebrow, title, quote, subtitle, footer, imageUrl }: Card): Promise<ImageResponse> {
+// No faces: shared images carry records and numbers only (implementation-design 4장·11장).
+export async function ogCard({ eyebrow, title, quote, subtitle, footer }: Card): Promise<ImageResponse> {
   const heading = clip(title, 54);
   const body = quote ? `“${clip(quote, 110)}”` : null;
   const line = subtitle ? clip(subtitle, 60) : null;
@@ -48,9 +48,7 @@ export async function ogCard({ eyebrow, title, quote, subtitle, footer, imageUrl
         <div style={{ display: "flex", color: "#8a2233", fontSize: 30, fontWeight: 800 }}>{eyebrow}</div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 48 }}>
-        {/* Satori renders plain <img>; next/image does not apply here. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {imageUrl && <img src={imageUrl} width={220} height={220} style={{ width: 220, height: 220, flexShrink: 0, borderRadius: 110, objectFit: "cover" }} alt="" />}
+
         <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 24 }}>
           <div style={{ display: "flex", fontSize: heading.length > 30 ? 56 : 68, fontWeight: 800, lineHeight: 1.25, letterSpacing: -1.5, wordBreak: "keep-all" }}>{heading}</div>
           {line && <div style={{ display: "flex", color: "#44403b", fontSize: 34, wordBreak: "keep-all" }}>{line}</div>}
