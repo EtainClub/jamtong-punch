@@ -200,3 +200,9 @@
 .playLinks a { display: flex; min-height: 44px; align-items: center; justify-content: center; border-radius: 12px; color: white; font-size: 15px; font-weight: 800; text-decoration: none; }
 .playPunch { background: var(--burgundy); }
 .playCheer { background: var(--navy); }
+/* Every person tile is the same size: tiles fill their grid cell, and the
+   role always takes exactly two lines (clamped, full text on hover). */
+.peopleGrid > li { display: flex; }
+.peopleGrid .personTile { flex: 1; min-width: 0; }
+.personTile > div { min-width: 0; }
+.personTile .tileRole { display: -webkit-box; overflow: hidden; min-height: calc(2 * 1.4em); line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
