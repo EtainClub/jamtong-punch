@@ -12,10 +12,14 @@ import { ReportButton } from "@/features/archive/ReportButton";
 import { getPublicSubjectStats, getRatioFlags, getStatementStats, ratioHidden } from "@/lib/stats/read";
 import { StanceButtons } from "@/features/archive/StanceButtons";
 import { OpsEditLink } from "@/features/archive/OpsEditLink";
+import { PersonActivity } from "@/features/archive/PersonActivity";
+import { RelationPreview } from "@/features/archive/RelationPreview";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
+// How many records the year chart counts. Beyond this it shows the latest ones.
+const ACTIVITY_LIMIT = 500;
 const TABS = [["records", "기록"], ["views", "시선"], ["relations", "관계"]] as const;
 type Tab = (typeof TABS)[number][0];
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
@@ -52,6 +56,7 @@ export default async function PersonPage({ params, searchParams }: Props) {
     <SiteHeader current="people" />
     <main className={styles.shell}>
       <Profile person={person} />
+      {tab !== "relations" && <RelationPreview person={person} people={people} />}
       <nav className={styles.tabs} aria-label="인물 기록 구분">{TABS.map(([key, label]) => <Link key={key} href={`/people/${person.id}${key === "records" ? "" : `?tab=${key}`}`} aria-current={tab === key ? "page" : undefined}>{label}</Link>)}</nav>
       {tab === "records" && <Records person={person} limit={PAGE_SIZE * (more + 1)} more={more} topic={topic} compare={compare} names={names} topicNames={topicNames} href={href} />}
       {tab === "views" && <Views person={person} limit={PAGE_SIZE * (more + 1)} more={more} names={names} topicNames={topicNames} href={href} />}
@@ -89,14 +94,24 @@ async function Profile({ person }: { person: PersonView }) {
 async function Records({ person, limit, more, topic, compare, names, topicNames, href }: {
   person: PersonView; limit: number; more: number; topic: string | null; compare: string | null; names: Names; topicNames: Names; href: (patch: Record<string, string | null>) => string;
 }) {
-  const [page, personTopics, comparison] = await Promise.all([
+  const [page, personTopics, comparison, all, received] = await Promise.all([
     personStatements(person.id, limit, topic),
     personTopicIds(person.id),
     compare ? personStatements(person.id, 50, compare) : Promise.resolve(null),
+    personStatements(person.id, ACTIVITY_LIMIT, null),
+    personEvaluations(person.id, ACTIVITY_LIMIT),
   ]);
+  // A year's bar opens the page far enough down the (newest-first) record to
+  // reach that year, then jumps to its heading.
+  const statementYearHref = (year: number) => {
+    const index = all.items.findIndex((item) => item.occurredAt.startsWith(String(year)));
+    const pages = Math.floor(Math.max(index, 0) / PAGE_SIZE);
+    return `${href({ topic: null, more: pages ? String(pages) : null })}#y${year}`;
+  };
   const [sources, stats] = await Promise.all([getSources(sourceIdsOf([...page.items, ...(comparison?.items ?? [])])), getStatementStats(page.items.map((item) => item.id))]);
   const topicChoices = personTopics.filter((id) => topicNames[id]);
   return <>
+    {!topic && <PersonActivity statements={all.items} evaluations={received.items} statementYearHref={statementYearHref} viewsHref={`/people/${person.id}?tab=views`} />}
     {topicChoices.length > 0 && <ul className={styles.chips} aria-label="쟁점으로 거르기">
       <li><Link className={styles.chip} href={href({ topic: null })} aria-current={topic === null}>전체</Link></li>
       {topicChoices.map((id) => <li key={id}><Link className={styles.chip} href={href({ topic: id })} aria-current={topic === id}>#{topicNames[id]}</Link></li>)}

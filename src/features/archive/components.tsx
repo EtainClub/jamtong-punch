@@ -170,7 +170,7 @@ export function StatementTimeline({ statements, ...props }: { statements: Statem
     const year = statement.occurredAt.slice(0, 4);
     years.set(year, [...(years.get(year) ?? []), statement]);
   }
-  return <>{[...years].map(([year, items]) => <section key={year} aria-label={`${year}년`}>
+  return <>{[...years].map(([year, items]) => <section key={year} id={`y${year}`} aria-label={`${year}년`}>
     <h2 className={styles.year}>{year}</h2>
     <ol className={styles.timeline}>{items.map((statement) => <li key={statement.id}><StatementCard statement={statement} {...props} /></li>)}</ol>
   </section>)}</>;
