@@ -84,3 +84,15 @@ svg .lit, svg .dim { box-shadow: none; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tryList, .doors { grid-template-columns: 1fr; }
 }
+
+/* Caution */
+.caution { border: 1px solid var(--pending); border-radius: var(--radius-card); background: var(--pending-tint); padding: 20px 18px; }
+.caution a, .actions dd a { color: var(--navy); font-weight: 750; }
+.cautionList { display: grid; gap: 16px; margin: 0; padding-left: 20px; }
+.cautionList > li { font-size: 15px; line-height: 1.6; }
+.cautionList > li::marker { color: var(--pending); font-weight: 800; }
+.cautionList b { display: block; margin-bottom: 4px; }
+.cautionList p { margin: 0; color: var(--graphite); }
+.cautionList ul { margin: 8px 0 0; padding-left: 18px; color: var(--graphite); font-size: 14px; }
+.cautionList ul li { margin-top: 4px; }
+.small { margin: 16px 0 0; color: var(--smoke); font-size: 13px; line-height: 1.6; }

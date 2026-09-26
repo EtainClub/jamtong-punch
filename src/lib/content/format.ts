@@ -56,7 +56,7 @@ export const statementKindLabels: Record<string, string> = {
 };
 
 export const evaluationFormatLabels: Record<string, string> = {
-  video: "영상", broadcast: "방송", interview: "인터뷰", column: "칼럼", sns: "SNS", book: "책",
+  video: "영상", broadcast: "방송", interview: "인터뷰", remark: "발언", column: "칼럼", sns: "SNS", book: "책",
 };
 
 export const participantRoleLabels: Record<string, string> = {

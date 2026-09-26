@@ -64,6 +64,15 @@ export const personEvaluations = unstable_cache(async (personId: string, limit: 
   page(published("evaluations").where("targetPersonId", "==", personId).orderBy("occurredAt", "desc"), limit, evaluation),
 ["archive", "person-evaluations"], CACHE);
 
+// Evaluations this person made of others. They are this person's words, so
+// they belong on their own record as well as on the target's "시선". Two
+// equality filters run on Firestore's single-field indexes; the sort happens
+// here (a person gives tens, not thousands, of evaluations).
+export const personEvaluationsGiven = unstable_cache(async (personId: string) =>
+  (await published("evaluations").where("evaluator.personId", "==", personId).get()).docs.map(evaluation)
+    .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)),
+["archive", "person-evaluations-given"], CACHE);
+
 export const personRelations = unstable_cache(async (personId: string): Promise<Relationship[]> => {
   const snapshots = await db.collection("relationships").where("personIds", "array-contains", personId).orderBy("weight", "desc").limit(50).get();
   return snapshots.docs.map((snapshot) => {

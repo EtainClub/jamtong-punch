@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { Avatar, CitationLinks, currentRole, Empty, EvaluationCard, MoreLink, nameMap, RATIOS_HIDDEN_NOTE, SiteHeader, StatementTimeline, type Names, type Sources } from "@/features/archive/components";
 import styles from "@/features/archive/archive.module.css";
 import { RelationsSection } from "@/features/archive/RelationsSection";
-import { getPerson, getSources, listPeople, listTopics, personEvaluations, personStatements, personTopicIds, sourceIdsOf, type PersonView, type StatementView } from "@/lib/archive/read";
+import { getPerson, getSources, listPeople, listTopics, personEvaluations, personEvaluationsGiven, personStatements, personTopicIds, sourceIdsOf, type PersonView, type StatementView } from "@/lib/archive/read";
 import { formatShortDate } from "@/lib/content/format";
 import { present } from "@/lib/stats/present";
 import { ReportButton } from "@/features/archive/ReportButton";
@@ -94,13 +94,17 @@ async function Profile({ person }: { person: PersonView }) {
 async function Records({ person, limit, more, topic, compare, names, topicNames, href }: {
   person: PersonView; limit: number; more: number; topic: string | null; compare: string | null; names: Names; topicNames: Names; href: (patch: Record<string, string | null>) => string;
 }) {
-  const [page, personTopics, comparison, all, received] = await Promise.all([
+  const [page, personTopics, comparison, all, received, allGiven] = await Promise.all([
     personStatements(person.id, limit, topic),
     personTopicIds(person.id),
     compare ? personStatements(person.id, 50, compare) : Promise.resolve(null),
     personStatements(person.id, ACTIVITY_LIMIT, null),
     personEvaluations(person.id, ACTIVITY_LIMIT),
+    personEvaluationsGiven(person.id),
   ]);
+  // The record is everything this person said: their statements and the
+  // evaluations they made of others.
+  const given = topic ? allGiven.filter((item) => item.topicIds.includes(topic)) : allGiven;
   // A year's bar opens the page far enough down the (newest-first) record to
   // reach that year, then jumps to its heading.
   const statementYearHref = (year: number) => {
@@ -108,8 +112,8 @@ async function Records({ person, limit, more, topic, compare, names, topicNames,
     const pages = Math.floor(Math.max(index, 0) / PAGE_SIZE);
     return `${href({ topic: null, more: pages ? String(pages) : null })}#y${year}`;
   };
-  const [sources, stats] = await Promise.all([getSources(sourceIdsOf([...page.items, ...(comparison?.items ?? [])])), getStatementStats(page.items.map((item) => item.id))]);
-  const topicChoices = personTopics.filter((id) => topicNames[id]);
+  const [sources, stats] = await Promise.all([getSources(sourceIdsOf([...page.items, ...(comparison?.items ?? []), ...given])), getStatementStats(page.items.map((item) => item.id))]);
+  const topicChoices = [...new Set([...personTopics, ...allGiven.flatMap((item) => item.topicIds)])].filter((id) => topicNames[id]);
   return <>
     {!topic && <PersonActivity statements={all.items} evaluations={received.items} statementYearHref={statementYearHref} viewsHref={`/people/${person.id}?tab=views`} />}
     {topicChoices.length > 0 && <ul className={styles.chips} aria-label="쟁점으로 거르기">
@@ -118,8 +122,13 @@ async function Records({ person, limit, more, topic, compare, names, topicNames,
     </ul>}
     {page.items.length
       ? <StatementTimeline statements={page.items} sources={sources} names={names} topics={topicNames} stats={stats} compareHref={(id) => href({ compare: id, more: more ? String(more) : null })} />
-      : <Empty>{topic ? "이 쟁점에 대한 공개 기록이 없습니다." : "공개된 기록이 아직 없습니다."}</Empty>}
+      : !given.length && <Empty>{topic ? "이 쟁점에 대한 공개 기록이 없습니다." : "공개된 기록이 아직 없습니다."}</Empty>}
     {page.hasMore && <MoreLink href={href({ more: String(more + 1) })} />}
+    {given.length > 0 && <section className={styles.section} aria-labelledby="given-title">
+      <div className={styles.sectionHead}><h2 id="given-title">다른 사람에 대한 평가 <small>{given.length}</small></h2></div>
+      <p className={styles.note}>{person.name}이(가) 다른 사람을 두고 한 말입니다. 평가받은 사람의 시선 탭에도 함께 실립니다.</p>
+      <ol className={styles.viewList}>{given.map((evaluation) => <li key={evaluation.id}><EvaluationCard evaluation={evaluation} sources={sources} names={names} topics={topicNames} showTarget /></li>)}</ol>
+    </section>}
     {comparison && compare && topicNames[compare] && <CompareSheet person={person} topicName={topicNames[compare]} statements={comparison.items} sources={sources} closeHref={href({ more: more ? String(more) : null })} />}
   </>;
 }

@@ -120,7 +120,7 @@ export const evaluationSchema = z.object({
   }).strict(),
   occurredAt: date,
   datePrecision,
-  format: z.enum([...SEGMENT_REQUIRED_FORMATS, "interview", "column", "sns", "book"]),
+  format: z.enum([...SEGMENT_REQUIRED_FORMATS, "interview", "remark", "column", "sns", "book"]),
   claim: z.string().min(1),
   quote: z.string().min(1).nullable().default(null),
   citation: citationSchema,
