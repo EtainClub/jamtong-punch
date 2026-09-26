@@ -309,3 +309,5 @@
 .relationPreview b { color: var(--smoke); font-size: 12px; }
 .visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 .hero .guideLink { margin-top: 12px; font-size: 15px; } .guideLink a { color: var(--navy); font-weight: 750; text-decoration: none; }
+.sortChips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; padding: 0; list-style: none; }
+.personTile div span b { color: var(--ink); font-weight: 750; }
