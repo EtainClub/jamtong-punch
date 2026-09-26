@@ -25,6 +25,7 @@ export default async function Home() {
         <p className={styles.eyebrow}>임통 · 인물 아카이브</p>
         <h1>사람의 말과 관계를<br />기록으로 봅니다.</h1>
         <p>누가 어떤 말을 해왔는지, 다른 사람들은 그를 어떻게 평가했는지, 누구를 언급해 왔는지. 모든 카드는 원자료로 끝납니다. 임통은 인물을 규정하지 않습니다.</p>
+        <p className={styles.guideLink}><Link href="/guide">처음이라면 둘러보기 →</Link></p>
       </section>
       <PeopleSearch people={people.map((person) => ({ id: person.id, name: person.name, aliases: person.aliases, role: currentRole(person) }))} />
       <p className={styles.searchMore}><Link href="/search">발언·시선까지 찾으려면 검색 →</Link></p>

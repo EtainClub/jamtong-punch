@@ -308,3 +308,4 @@
 .relationPreview li a { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--stone); border-radius: var(--radius-pill); background: white; padding: 4px 10px 4px 4px; color: var(--ink); font-size: 14px; font-weight: 700; text-decoration: none; }
 .relationPreview b { color: var(--smoke); font-size: 12px; }
 .visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.hero .guideLink { margin-top: 12px; font-size: 15px; } .guideLink a { color: var(--navy); font-weight: 750; text-decoration: none; }

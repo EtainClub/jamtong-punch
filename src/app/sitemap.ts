@@ -14,6 +14,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/people"),
     entry("/topics"),
     entry("/about"),
+    entry("/guide"),
     ...index.people.map((item) => entry(`/people/${item.id}`, item.updatedAt)),
     ...index.statements.map((item) => entry(`/statements/${item.id}`, item.updatedAt)),
     ...index.evaluations.map((item) => entry(`/evaluations/${item.id}`, item.updatedAt)),

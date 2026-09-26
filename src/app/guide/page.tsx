@@ -1,0 +1,145 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { SiteHeader } from "@/features/archive/components";
+import archive from "@/features/archive/archive.module.css";
+import { CHAPTERS } from "@/features/guide/chapters";
+import { GuideTour } from "@/features/guide/GuideTour";
+import styles from "@/features/guide/guide.module.css";
+import { listPeople, listTopics } from "@/lib/archive/read";
+import { shareMetadata } from "@/lib/site";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = shareMetadata("임통 둘러보기", "처음 온 사람을 위한 임통 사용 안내. 기록 카드 읽는 법, 인물·쟁점·게임·검색, 믿어도 되는 이유.");
+
+const COMPARE_TOPIC = "government-assessment";
+
+export default async function GuidePage() {
+  const [people, topics] = await Promise.all([listPeople(), listTopics()]);
+  const statements = people.reduce((sum, person) => sum + person.counts.statements, 0);
+  const evaluations = people.reduce((sum, person) => sum + person.counts.evaluationsReceived, 0);
+  const busiest = [...people].sort((left, right) => right.counts.statements - left.counts.statements)[0];
+  const compareTopic = topics.find((topic) => topic.id === COMPARE_TOPIC) ?? topics[0];
+
+  return <>
+    <SiteHeader />
+    <main className={archive.shell}>
+      <section className={archive.hero}>
+        <p className={archive.eyebrow}>둘러보기</p>
+        <h1>처음 오셨나요</h1>
+        <p>임통은 정치인과 공인이 <b>한 말</b>을 원자료와 함께 모아 두는 곳입니다. 누가 옳은지 대신 정해 주지 않습니다. 대신 누가 언제 무엇을 말했는지, 화면의 카드마다 눌러서 확인할 수 있게 만들었습니다.</p>
+        <ul className={styles.stats}>
+          <li><b>{people.length}</b><span>인물</span></li>
+          <li><b>{statements}</b><span>언행</span></li>
+          <li><b>{evaluations}</b><span>시선</span></li>
+          <li><b>{topics.length}</b><span>쟁점</span></li>
+        </ul>
+      </section>
+
+      <div className={styles.guide}>
+        <section aria-labelledby="tour-title">
+          <h2 id="tour-title">그림으로 먼저 보기</h2>
+          <p className={styles.lead}>세 장이면 임통이 어떻게 생겼는지 다 나옵니다. 화살표를 누르면 그림에서 한 곳씩 밝아지고, 무엇인지는 그 아래 글로 적힙니다.</p>
+          <GuideTour />
+          <details className={styles.readAll}>
+            <summary>글로 읽기</summary>
+            {CHAPTERS.map((chapter, index) => <div key={chapter.key}>
+              <h3>0{index + 1} {chapter.label} · {chapter.title}</h3>
+              <ol>{chapter.steps.map((step) => <li key={step.part}>{step.text}</li>)}</ol>
+            </div>)}
+          </details>
+        </section>
+
+        <section aria-labelledby="try-title">
+          <h2 id="try-title">먼저 하나 해보세요</h2>
+          <p className={styles.lead}>설명을 읽는 것보다 한 번 눌러 보는 쪽이 빠릅니다. 셋 중 아무거나 하나면 됩니다.</p>
+          <ul className={styles.tryList}>
+            {busiest && <li><Link href={`/people/${busiest.id}`}>
+              <em>열어 봅니다</em><strong>{busiest.name}</strong>
+              <p>한 사람의 말이 연도별로 쌓여 있습니다. 카드의 출처를 누르면 영상의 그 구간이 재생됩니다.</p>
+              <span>인물 페이지 →</span>
+            </Link></li>}
+            {compareTopic && <li><Link href={`/topics/${compareTopic.id}?view=compare`}>
+              <em>나란히 봅니다</em><strong>#{compareTopic.name}</strong>
+              <p>같은 쟁점에 두 사람이 한 말을 좌우로 놓습니다. 이름 칸에서 비교할 사람을 바꿉니다.</p>
+              <span>나란히 비교 →</span>
+            </Link></li>}
+            <li><Link href="/play">
+              <em>눌러 봅니다</em><strong>펀치 · 응원</strong>
+              <p>인물 얼굴이 뜨면 펀치나 응원을 날립니다. 한 판이 오늘의 입장 1건이 됩니다.</p>
+              <span>게임 고르기 →</span>
+            </Link></li>
+          </ul>
+        </section>
+
+        <section aria-labelledby="doors-title">
+          <h2 id="doors-title">네 갈래로 들어갑니다</h2>
+          <p className={styles.lead}>화면 아래(PC에서는 위) 네 메뉴가 네 가지 질문에 하나씩 답합니다.</p>
+          <ul className={styles.doors}>
+            <li><Link href="/people">
+              <q>이 사람은 무슨 말을 해 왔나</q><strong>인물 <small>{people.length}명</small></strong>
+              <p>본인이 한 말(언행), 남이 그를 두고 한 말(시선), 말로 이어진 사람(관계)을 한곳에 둡니다.</p>
+            </Link></li>
+            <li><Link href="/topics">
+              <q>같은 문제에 누가 뭐라 했나</q><strong>쟁점 <small>{topics.length}개</small></strong>
+              <p>하나의 쟁점을 인물별, 두 사람 나란히, 시간순 세 가지로 봅니다.</p>
+            </Link></li>
+            <li><Link href="/play">
+              <q>나는 이 사람을 어떻게 보나</q><strong>게임 <small>3종</small></strong>
+              <p>반사 게임, 카드 넘기기, 월드컵. 가볍게 즐기면서 내 입장을 남깁니다.</p>
+            </Link></li>
+            <li><Link href="/search">
+              <q>그 말, 누가 했더라</q><strong>검색</strong>
+              <p>인물 이름뿐 아니라 요약, 원문, 맥락, 쟁점까지 한 번에 찾습니다.</p>
+            </Link></li>
+          </ul>
+        </section>
+
+        <section aria-labelledby="anatomy-title">
+          <h2 id="anatomy-title">인물 페이지는 이렇게 생겼습니다</h2>
+          <p className={styles.lead}>누구를 열어도 순서가 같습니다. 한 번만 익히면 됩니다.</p>
+          <ol className={styles.anatomy}>
+            <li><span><b>프로필과 참여</b>지금 맡은 일, 기록·평가·관계 수, 최근 30일 펀치·응원 비율과 게임 버튼.</span></li>
+            <li><span><b>발언으로 이어진 사람</b>말로 가장 많이 이어진 다섯 명. 누르면 두 사람 사이의 기록만 모아 봅니다.</span></li>
+            <li><span><b>연도별 기록</b>언행과 받은 평가가 해마다 얼마나 되는지 막대로 봅니다. 막대를 누르면 그해로 갑니다.</span></li>
+            <li><span><b>기록 탭</b>본인이 한 말을 최신순으로. 쟁점으로 거르거나, 같은 쟁점의 말을 시간순으로 모아 볼 수 있습니다.</span></li>
+            <li><span><b>시선 탭</b>다른 사람들이 이 인물을 두고 한 말. 반론이 있으면 그 아래에 붙습니다.</span></li>
+            <li><span><b>관계 탭</b>누가 누구를 언급하고 평가했는지 관계도로 봅니다.</span></li>
+          </ol>
+        </section>
+
+        <section aria-labelledby="actions-title">
+          <h2 id="actions-title">화면에서 할 수 있는 것</h2>
+          <dl className={styles.actions}>
+            <div><dt>구간 재생</dt><dd>카드의 ▶ 출처를 누르면 영상이 그 말을 한 대목부터 재생됩니다.</dd></div>
+            <div><dt>쟁점 보기 바꾸기</dt><dd>쟁점 페이지 위쪽의 인물별 · 나란히 비교 · 시간순으로 같은 기록을 다르게 읽습니다.</dd></div>
+            <div><dt>공유</dt><dd>기록마다, 월드컵 결과마다 링크가 따로 있습니다. 받은 사람은 같은 화면을 봅니다.</dd></div>
+            <div><dt>신고 · 정정 요청</dt><dd>틀린 기록, 빠진 맥락, 사진 문제를 카드와 인물 페이지의 버튼으로 알려 주세요. 운영자가 확인해 고칩니다.</dd></div>
+            <div><dt>기록 등록하기</dt><dd>구글 계정으로 로그인하면 누구나 언행과 시선을 등록할 수 있습니다. 유튜브 링크 하나로 초안이 만들어지고, 운영자가 확인한 뒤 공개됩니다.</dd></div>
+            <div><dt>앱처럼 쓰기</dt><dd>브라우저 메뉴의 &lsquo;홈 화면에 추가&rsquo;나 &lsquo;앱 설치&rsquo;로 설치하면 앱처럼 열립니다. 새 버전이 나오면 화면 아래에 알려 줍니다.</dd></div>
+          </dl>
+        </section>
+
+        <section aria-labelledby="trust-title">
+          <h2 id="trust-title">믿어도 되는지</h2>
+          <ul className={styles.trust}>
+            <li><b>출처 없는 기록은 없습니다.</b>모든 카드는 방송·기사·영상 같은 원자료로 끝나고, 인용한 구간의 원문을 함께 보관합니다.</li>
+            <li><b>임통은 판정하지 않습니다.</b>요약의 주어는 언제나 말한 사람입니다. 입장이 바뀌었다거나 누가 옳다고 적지 않습니다.</li>
+            <li><b>공개 전에 사람이 확인합니다.</b>새 기록은 &lsquo;검토 대기&rsquo;로 들어오고 운영자가 원자료와 대조한 뒤 공개합니다.</li>
+            <li><b>나중에 몰래 고칠 수 없습니다.</b>공개된 기록의 지문은 블록체인에 남아, 누구나 지금 화면과 대조할 수 있습니다.</li>
+            <li><b>참여 수치는 여론조사가 아닙니다.</b>임통에 온 사람들의 기록이고, 한 사람이 한 대상에 하루 1건만 남깁니다.</li>
+          </ul>
+          <div className={styles.links}>
+            <Link href="/about">기록 원칙 전문 읽기 →</Link>
+            <Link href="/about#privacy">개인정보처리방침 →</Link>
+          </div>
+        </section>
+
+        <section className={styles.start} aria-labelledby="start-title">
+          <h2 id="start-title">이제 시작하기</h2>
+          <p>인물 · 쟁점 · 게임 · 검색 메뉴는 어느 화면에서든 따라다닙니다. 길을 잃으면 왼쪽 위 임통 로고를 누르세요.</p>
+          <Link href="/">홈으로 가기 →</Link>
+        </section>
+      </div>
+    </main>
+  </>;
+}
