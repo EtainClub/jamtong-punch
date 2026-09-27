@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { ComparePicker } from "@/features/archive/ComparePicker";
 import { Avatar, Empty, EvaluationCard, MoreLink, nameMap, SiteHeader, StatementCard } from "@/features/archive/components";
 import styles from "@/features/archive/archive.module.css";
-import { getSources, listPeople, listTopics, sourceIdsOf, topicEvaluations, topicEvents, topicStatements, type StatementView } from "@/lib/archive/read";
+import { getSources, listPeople, listTopics, outcomesFor, sourceIdsOf, topicEvaluations, topicEvents, topicStatements, type StatementView } from "@/lib/archive/read";
 import { formatShortDate } from "@/lib/content/format";
 import { getStatementStats } from "@/lib/stats/read";
 
@@ -33,7 +33,8 @@ export default async function TopicPage({ params, searchParams }: Props) {
   const view: View = VIEWS.some(([key]) => key === query.view) ? query.view as View : "people";
   const viewHref = (next: View) => `/topics/${slug}${next === "people" ? "" : `?view=${next}`}`;
   const [people, statements, evaluations, events] = await Promise.all([listPeople(), topicStatements(slug, PAGE_SIZE * (more + 1)), topicEvaluations(slug), topicEvents(slug)]);
-  const [sources, stats] = await Promise.all([getSources(sourceIdsOf([...statements.items, ...evaluations])), getStatementStats(statements.items.map((item) => item.id))]);
+  const outcomes = await outcomesFor([...statements.items, ...evaluations].map((item) => item.id));
+  const [sources, stats] = await Promise.all([getSources(sourceIdsOf([...statements.items, ...evaluations, ...Object.values(outcomes).flat()])), getStatementStats(statements.items.map((item) => item.id))]);
   const names = nameMap(people);
   const topicNames = nameMap(topics);
   const byId = new Map(people.map((person) => [person.id, person]));
@@ -83,7 +84,7 @@ export default async function TopicPage({ params, searchParams }: Props) {
         <div className={styles.sectionHead}><h2 id="speakers-title">인물별 언행</h2></div>
         {speakers.length ? speakers.map(([personId, items]) => <div key={personId} id={`speaker-${personId}`} className={styles.speakerGroup}>
           <h3><Avatar person={byId.get(personId)!} size={28} /><Link href={`/people/${personId}?compare=${topic.id}`}>{names[personId]}</Link></h3>
-          <ol className={styles.timeline}>{items.map((statement) => <li key={statement.id}><StatementCard statement={statement} sources={sources} names={names} topics={topicNames} stats={stats} withYear /></li>)}</ol>
+          <ol className={styles.timeline}>{items.map((statement) => <li key={statement.id}><StatementCard statement={statement} sources={sources} names={names} topics={topicNames} stats={stats} outcomes={outcomes} withYear /></li>)}</ol>
         </div>) : <Empty>이 쟁점에 대한 공개 언행이 아직 없습니다.</Empty>}
         {statements.hasMore && <MoreLink href={`/topics/${topic.id}?more=${more + 1}`} />}
       </section>}
@@ -112,7 +113,7 @@ export default async function TopicPage({ params, searchParams }: Props) {
 
       {view === "people" && evaluations.length > 0 && <section className={styles.section} aria-labelledby="evaluations-title">
         <div className={styles.sectionHead}><h2 id="evaluations-title">평가</h2></div>
-        <ol className={styles.viewList}>{evaluations.map((evaluation) => <li key={evaluation.id}><EvaluationCard evaluation={evaluation} sources={sources} names={names} topics={topicNames} showTarget /></li>)}</ol>
+        <ol className={styles.viewList}>{evaluations.map((evaluation) => <li key={evaluation.id}><EvaluationCard evaluation={evaluation} sources={sources} names={names} topics={topicNames} outcomes={outcomes} showTarget /></li>)}</ol>
       </section>}
 
       {events.length > 0 && <section className={styles.section} aria-labelledby="events-title">

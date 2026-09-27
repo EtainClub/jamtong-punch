@@ -175,6 +175,22 @@ export const bracketSchema = z.object({
     .refine((items) => new Set(items).size === items.length, "duplicate bracket statement"),
 }).strict();
 
+// What happened after a statement or an evaluation, told as facts from
+// official data ("그 후 실제로는"). It never says whether the speaker was right:
+// the reader puts the words and the facts side by side. Operators only.
+export const OUTCOME_SUBJECT_TYPES = ["statement", "evaluation"] as const;
+export const outcomeSchema = z.object({
+  id,
+  subject: z.object({ type: z.enum(OUTCOME_SUBJECT_TYPES), id }).strict(),
+  // The date the facts below describe ("as of"), not when it was written.
+  asOf: date,
+  summary: z.string().min(1),
+  figures: z.array(z.object({ label: z.string().min(1), value: z.string().min(1) }).strict()).max(6).default([]),
+  citations: z.array(citationSchema).min(1),
+  status,
+  corrections,
+}).strict();
+
 export type Citation = z.infer<typeof citationSchema>;
 export type Source = z.infer<typeof sourceSchema>;
 export type Person = z.infer<typeof personSchema>;
@@ -183,6 +199,7 @@ export type Evaluation = z.infer<typeof evaluationSchema>;
 export type Event = z.infer<typeof eventSchema>;
 export type Topic = z.infer<typeof topicSchema>;
 export type Bracket = z.infer<typeof bracketSchema>;
+export type Outcome = z.infer<typeof outcomeSchema>;
 
 export type RelationshipEvidence = {
   type: "mention" | "evaluation";

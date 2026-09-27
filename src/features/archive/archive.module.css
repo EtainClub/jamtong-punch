@@ -311,3 +311,13 @@
 .hero .guideLink { margin-top: 12px; font-size: 15px; } .guideLink a { color: var(--navy); font-weight: 750; text-decoration: none; }
 .sortChips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; padding: 0; list-style: none; }
 .personTile div span b { color: var(--ink); font-weight: 750; }
+.outcomes { display: grid; gap: 10px; margin: 4px 0; border: 1px solid var(--navy-tint); border-left: 4px solid var(--navy); border-radius: 12px; background: #f6f8fc; padding: 12px 14px; }
+.outcomes h4 { margin: 0; color: var(--navy); font-size: 13px; font-weight: 800; letter-spacing: .04em; }
+.outcome { display: grid; gap: 6px; }
+.outcome + .outcome { border-top: 1px solid var(--navy-tint); padding-top: 10px; }
+.outcomeText { margin: 0; font-size: 15px; line-height: 1.6; }
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px; margin: 0; }
+.figures div { border-radius: 8px; background: white; padding: 6px 10px; }
+.figures dt { color: var(--smoke); font-size: 12px; }
+.figures dd { margin: 0; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.outcomeNote { margin: 0; color: var(--smoke); font-size: 12px; line-height: 1.5; }

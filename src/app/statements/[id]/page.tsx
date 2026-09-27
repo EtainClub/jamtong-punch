@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { nameMap, SiteHeader, StatementCard } from "@/features/archive/components";
 import { statementShare } from "@/features/archive/share-text";
 import styles from "@/features/archive/archive.module.css";
-import { getPublishedRecord, getSources, listPeople, listTopics, sourceIdsOf, type StatementView } from "@/lib/archive/read";
+import { getPublishedRecord, getSources, listPeople, listTopics, outcomesFor, sourceIdsOf, type StatementView } from "@/lib/archive/read";
 import { shareMetadata } from "@/lib/site";
 import { getStatementStats } from "@/lib/stats/read";
 
@@ -29,13 +29,14 @@ export default async function StatementPage({ params }: Props) {
   const { id } = await params;
   const statement = await load(id);
   if (!statement) notFound();
-  const [people, topics, sources, stats] = await Promise.all([listPeople(), listTopics(), getSources(sourceIdsOf([statement])), getStatementStats([id])]);
+  const outcomes = await outcomesFor([id]);
+  const [people, topics, sources, stats] = await Promise.all([listPeople(), listTopics(), getSources(sourceIdsOf([statement, ...Object.values(outcomes).flat()])), getStatementStats([id])]);
   const names = nameMap(people);
   return <>
     <SiteHeader />
     <main className={styles.shell}>
       <section className={styles.hero}><p className={styles.eyebrow}>언행</p></section>
-      <div className={styles.viewCard}><StatementCard statement={statement} sources={sources} names={names} topics={nameMap(topics)} stats={stats} showSpeaker /></div>
+      <div className={styles.viewCard}><StatementCard statement={statement} sources={sources} names={names} topics={nameMap(topics)} stats={stats} outcomes={outcomes} showSpeaker /></div>
       <p className={styles.more}><Link href={`/people/${statement.personId}`}>{names[statement.personId]}의 기록 전체 보기 →</Link></p>
     </main>
   </>;

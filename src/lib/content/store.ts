@@ -1,8 +1,8 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { z, ZodError } from "zod";
 import {
-  bracketSchema, eventSchema, evaluationSchema, personSchema, sourceSchema, statementSchema, topicSchema,
-  type Bracket, type Citation, type Evaluation, type Event, type Person, type Source, type Statement, type Topic,
+  bracketSchema, eventSchema, evaluationSchema, outcomeSchema, personSchema, sourceSchema, statementSchema, topicSchema,
+  type Bracket, type Citation, type Evaluation, type Event, type Outcome, type Person, type Source, type Statement, type Topic,
 } from "@/content/schema";
 import {
   buildRelationship, citationSourceIds, evaluationEvidence, evaluationPairs, labelWordsIn, memberIds, mentionedPersonIds,
@@ -10,10 +10,10 @@ import {
 } from "@/lib/content/derive";
 import type { Kind } from "@/lib/domain";
 import { db } from "@/lib/firebase/admin";
-import type { AnchorType, SourceRefs } from "@/lib/anchor/canonical";
+import type { AnchoredRecord, AnchorType, SourceRefs } from "@/lib/anchor/canonical";
 import { queueAnchor } from "@/lib/anchor/queue";
 
-export const contentTypeSchema = z.enum(["people", "sources", "statements", "evaluations", "events", "topics", "brackets"]);
+export const contentTypeSchema = z.enum(["people", "sources", "statements", "evaluations", "events", "topics", "brackets", "outcomes"]);
 export type ContentType = z.infer<typeof contentTypeSchema>;
 export type ContentMap = {
   people: Person;
@@ -23,6 +23,7 @@ export type ContentMap = {
   events: Event;
   topics: Topic;
   brackets: Bracket;
+  outcomes: Outcome;
 };
 export type ContentValue = ContentMap[ContentType];
 // Authored value plus the fields the store derives from it.
@@ -42,10 +43,11 @@ const schemas = {
   events: eventSchema,
   topics: topicSchema,
   brackets: bracketSchema,
+  outcomes: outcomeSchema,
 } as const;
 
 const META_FIELDS = ["createdAt", "createdBy", "updatedAt", "updatedBy", "contributor", "rejection", "firstPublishedAt"];
-// What signed-in contributors may submit. Events and brackets stay with operators.
+// What signed-in contributors may submit. Events, brackets and outcomes stay with operators.
 const CONTRIBUTABLE = new Set<ContentType>(["people", "statements", "evaluations", "sources", "topics"]);
 export const DERIVED_FIELDS: Record<ContentType, string[]> = {
   people: ["counts", "searchTokens", "sourceIds"],
@@ -55,6 +57,7 @@ export const DERIVED_FIELDS: Record<ContentType, string[]> = {
   events: ["memberIds", "sourceIds"],
   topics: ["counts"],
   brackets: [],
+  outcomes: ["sourceIds"],
 };
 
 const EMPTY_PERSON_COUNTS = { statements: 0, evaluationsReceived: 0, evaluationsGiven: 0, relations: 0 };
@@ -245,6 +248,16 @@ async function validate(type: ContentType, value: ContentValue) {
       await requireRefs("statements", bracket.statementIds, bracket);
       return;
     }
+    case "outcomes": {
+      const outcome = value as Outcome;
+      rejectLabels("summary", outcome.summary);
+      await requireRefs(outcome.subject.type === "statement" ? "statements" : "evaluations", [outcome.subject.id], outcome);
+      // An outcome is told as fact, so like a FACT statement it needs a source
+      // whose content can be shown, not only linked.
+      const sources = await validateCitations(outcome.citations);
+      if ([...sources.values()].every((source) => source.license === "link-only")) throw new ContentError(400, "outcome needs a usable source");
+      return;
+    }
   }
 }
 
@@ -261,7 +274,7 @@ async function findWhere(type: ContentType, field: string, op: "==" | "array-con
 // disappear on the next rescan when a person is removed.
 async function dependentsOf(type: ContentType, id: string): Promise<Dependent[]> {
   const lookups: Array<Promise<Dependent[]>> = [];
-  if (type === "sources") for (const other of ["people", "statements", "evaluations", "events"] as const) lookups.push(findWhere(other, "sourceIds", "array-contains", id));
+  if (type === "sources") for (const other of ["people", "statements", "evaluations", "events", "outcomes"] as const) lookups.push(findWhere(other, "sourceIds", "array-contains", id));
   if (type === "people") lookups.push(
     findWhere("statements", "personId", "==", id),
     findWhere("evaluations", "targetPersonId", "==", id),
@@ -273,8 +286,8 @@ async function dependentsOf(type: ContentType, id: string): Promise<Dependent[]>
     lookups.push(findWhere("topics", "parentId", "==", id));
   }
   if (type === "events") lookups.push(findWhere("statements", "eventId", "==", id), findWhere("evaluations", "eventIds", "array-contains", id));
-  if (type === "statements") lookups.push(findWhere("brackets", "statementIds", "array-contains", id));
-  if (type === "evaluations") lookups.push(findWhere("evaluations", "respondsTo", "==", id));
+  if (type === "statements") lookups.push(findWhere("brackets", "statementIds", "array-contains", id), findWhere("outcomes", "subject.id", "==", id));
+  if (type === "evaluations") lookups.push(findWhere("evaluations", "respondsTo", "==", id), findWhere("outcomes", "subject.id", "==", id));
   return (await Promise.all(lookups)).flat().filter((item) => !(item.type === type && item.id === id));
 }
 
@@ -290,6 +303,7 @@ async function derivedFields(type: ContentType, value: ContentValue): Promise<Re
     case "statements": return { sourceIds: citationSourceIds((value as Statement).citations), mentionedPersonIds: mentionedPersonIds(value as Statement, await nameIndex()) };
     case "evaluations": return { sourceIds: citationSourceIds([(value as Evaluation).citation]) };
     case "events": return { memberIds: memberIds(value as Event), sourceIds: citationSourceIds((value as Event).citations) };
+    case "outcomes": return { sourceIds: citationSourceIds((value as Outcome).citations) };
     default: return {};
   }
 }
@@ -447,28 +461,28 @@ async function refreshDerived(type: ContentType, before: Derived | null, after: 
 
 // ---------------------------------------------------------------- writes
 
-const ANCHORED: Partial<Record<ContentType, AnchorType>> = { statements: "statement", evaluations: "evaluation" };
+const ANCHORED: Partial<Record<ContentType, AnchorType>> = { statements: "statement", evaluations: "evaluation", outcomes: "outcome" };
 
 async function sourceRefs(ids: string[]): Promise<SourceRefs> {
   const sources = await getMany("sources", ids);
   return Object.fromEntries([...sources].map(([id, source]) => [id, { url: source.url, videoId: source.video?.videoId ?? null }]));
 }
 
-function citedSourceIds(value: Statement | Evaluation): string[] {
+function citedSourceIds(value: AnchoredRecord): string[] {
   return "citation" in value ? [value.citation.sourceId] : value.citations.map((item) => item.sourceId);
 }
 
-// Statements and evaluations are anchored on chain (lib/anchor). A source's
-// url is part of their hash, so editing a source re-queues what cites it.
+// Statements, evaluations and outcomes are anchored on chain (lib/anchor). A
+// source's url is part of their hash, so editing a source re-queues what cites it.
 async function refreshAnchors(type: ContentType, id: string, value: ContentValue | null) {
   const anchorType = ANCHORED[type];
   if (anchorType) {
-    const record = value as Statement | Evaluation | null;
+    const record = value as AnchoredRecord | null;
     await queueAnchor(anchorType, id, record, record ? await sourceRefs(citedSourceIds(record)) : {});
     return;
   }
   if (type !== "sources") return;
-  for (const [citing, citingAnchor] of [["statements", "statement"], ["evaluations", "evaluation"]] as const) {
+  for (const [citing, citingAnchor] of [["statements", "statement"], ["evaluations", "evaluation"], ["outcomes", "outcome"]] as const) {
     const snapshots = await collection(citing).where("sourceIds", "array-contains", id).get();
     for (const snapshot of snapshots.docs) {
       const record = authored(citing, snapshot.data());

@@ -1,6 +1,5 @@
-import type { Evaluation, Statement } from "@/content/schema";
 import { db } from "@/lib/firebase/admin";
-import { evaluationPayload, payloadHash, statementPayload, type AnchorType, type SourceRefs } from "./canonical";
+import { payloadFor, payloadHash, type AnchoredRecord, type AnchorType, type SourceRefs } from "./canonical";
 import { isPending, nextVersion, type AnchorVersion } from "./versions";
 
 export function anchorDocId(type: AnchorType, id: string) {
@@ -10,11 +9,8 @@ export function anchorDocId(type: AnchorType, id: string) {
 // Called after every content write that can change what the public sees.
 // The chain write itself happens later (cron), so saving never waits on a
 // Steem node.
-export async function queueAnchor(type: AnchorType, id: string, value: Statement | Evaluation | null, sources: SourceRefs) {
-  const published = value && value.status === "published";
-  const hash = published
-    ? await payloadHash(type === "statement" ? statementPayload(value as Statement, sources) : evaluationPayload(value as Evaluation, sources))
-    : null;
+export async function queueAnchor(type: AnchorType, id: string, value: AnchoredRecord | null, sources: SourceRefs) {
+  const hash = value && value.status === "published" ? await payloadHash(payloadFor(type, value, sources)) : null;
   const ref = db.collection("anchors").doc(anchorDocId(type, id));
   return db.runTransaction(async (tx) => {
     const snapshot = await tx.get(ref);

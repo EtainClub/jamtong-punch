@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { Avatar, CitationLinks, currentRole, Empty, EvaluationCard, MoreLink, nameMap, RATIOS_HIDDEN_NOTE, SiteHeader, StatementTimeline, type Names, type Sources } from "@/features/archive/components";
 import styles from "@/features/archive/archive.module.css";
 import { RelationsSection } from "@/features/archive/RelationsSection";
-import { getPerson, getSources, listPeople, listTopics, personEvaluations, personEvaluationsGiven, personStatements, personTopicIds, sourceIdsOf, type PersonView, type StatementView } from "@/lib/archive/read";
+import { getPerson, getSources, listPeople, listTopics, outcomesFor, personEvaluations, personEvaluationsGiven, personStatements, personTopicIds, sourceIdsOf, type PersonView, type StatementView } from "@/lib/archive/read";
 import { formatShortDate } from "@/lib/content/format";
 import { present } from "@/lib/stats/present";
 import { ReportButton } from "@/features/archive/ReportButton";
@@ -112,7 +112,8 @@ async function Records({ person, limit, more, topic, compare, names, topicNames,
     const pages = Math.floor(Math.max(index, 0) / PAGE_SIZE);
     return `${href({ topic: null, more: pages ? String(pages) : null })}#y${year}`;
   };
-  const [sources, stats] = await Promise.all([getSources(sourceIdsOf([...page.items, ...(comparison?.items ?? []), ...given])), getStatementStats(page.items.map((item) => item.id))]);
+  const outcomes = await outcomesFor([...page.items, ...given].map((item) => item.id));
+  const [sources, stats] = await Promise.all([getSources(sourceIdsOf([...page.items, ...(comparison?.items ?? []), ...given, ...Object.values(outcomes).flat()])), getStatementStats(page.items.map((item) => item.id))]);
   const topicChoices = [...new Set([...personTopics, ...allGiven.flatMap((item) => item.topicIds)])].filter((id) => topicNames[id]);
   return <>
     {!topic && <PersonActivity statements={all.items} evaluations={received.items} statementYearHref={statementYearHref} viewsHref={`/people/${person.id}?tab=views`} />}
@@ -121,13 +122,13 @@ async function Records({ person, limit, more, topic, compare, names, topicNames,
       {topicChoices.map((id) => <li key={id}><Link className={styles.chip} href={href({ topic: id })} aria-current={topic === id}>#{topicNames[id]}</Link></li>)}
     </ul>}
     {page.items.length
-      ? <StatementTimeline statements={page.items} sources={sources} names={names} topics={topicNames} stats={stats} compareHref={(id) => href({ compare: id, more: more ? String(more) : null })} />
+      ? <StatementTimeline statements={page.items} sources={sources} names={names} topics={topicNames} stats={stats} outcomes={outcomes} compareHref={(id) => href({ compare: id, more: more ? String(more) : null })} />
       : !given.length && <Empty>{topic ? "이 쟁점에 대한 공개 기록이 없습니다." : "공개된 기록이 아직 없습니다."}</Empty>}
     {page.hasMore && <MoreLink href={href({ more: String(more + 1) })} />}
     {given.length > 0 && <section className={styles.section} aria-labelledby="given-title">
       <div className={styles.sectionHead}><h2 id="given-title">다른 사람에 대한 평가 <small>{given.length}</small></h2></div>
       <p className={styles.note}>{person.name}이(가) 다른 사람을 두고 한 말입니다. 평가받은 사람의 시선 탭에도 함께 실립니다.</p>
-      <ol className={styles.viewList}>{given.map((evaluation) => <li key={evaluation.id}><EvaluationCard evaluation={evaluation} sources={sources} names={names} topics={topicNames} showTarget /></li>)}</ol>
+      <ol className={styles.viewList}>{given.map((evaluation) => <li key={evaluation.id}><EvaluationCard evaluation={evaluation} sources={sources} names={names} topics={topicNames} outcomes={outcomes} showTarget /></li>)}</ol>
     </section>}
     {comparison && compare && topicNames[compare] && <CompareSheet person={person} topicName={topicNames[compare]} statements={comparison.items} sources={sources} closeHref={href({ more: more ? String(more) : null })} />}
   </>;
@@ -153,11 +154,12 @@ function CompareSheet({ person, topicName, statements, sources, closeHref }: { p
 
 async function Views({ person, limit, more, names, topicNames, href }: { person: PersonView; limit: number; more: number; names: Names; topicNames: Names; href: (patch: Record<string, string | null>) => string }) {
   const page = await personEvaluations(person.id, limit);
-  const sources = await getSources(sourceIdsOf(page.items));
+  const outcomes = await outcomesFor(page.items.map((item) => item.id));
+  const sources = await getSources(sourceIdsOf([...page.items, ...Object.values(outcomes).flat()]));
   return <>
     <p className={styles.note}>{person.name}에 대해 다른 사람들이 한 말입니다. 요약의 주어는 언제나 평가한 사람이며, 임통의 판단이 아닙니다.</p>
     {page.items.length
-      ? <ol className={styles.viewList}>{page.items.map((evaluation) => <li key={evaluation.id}><EvaluationCard evaluation={evaluation} sources={sources} names={names} topics={topicNames} responses={page.items.filter((item) => item.respondsTo === evaluation.id)} /></li>)}</ol>
+      ? <ol className={styles.viewList}>{page.items.map((evaluation) => <li key={evaluation.id}><EvaluationCard evaluation={evaluation} sources={sources} names={names} topics={topicNames} outcomes={outcomes} responses={page.items.filter((item) => item.respondsTo === evaluation.id)} /></li>)}</ol>
       : <Empty>공개된 평가가 아직 없습니다.</Empty>}
     {page.hasMore && <MoreLink href={href({ more: String(more + 1) })} />}
   </>;

@@ -159,6 +159,7 @@ export function ContentForm(props: FormProps) {
     case "topics": return <TopicForm {...props} />;
     case "sources": return <SourceForm {...props} />;
     case "brackets": return <BracketForm {...props} />;
+    case "outcomes": return <OutcomeForm {...props} />;
   }
 }
 
@@ -442,6 +443,32 @@ function SourceForm({ draft, update, isNew }: FormProps) {
     {role !== "ops" && message && <p className={`${styles.help} ${styles.wide}`} aria-live="polite">{message}</p>}
     <Field label="라이선스" required><Select value={str(draft.license)} onChange={(license) => update({ license })} choices={[["public", "공개"], ["quotable", "인용 가능"], ["link-only", "링크만"]]} /></Field>
     <Field label="권리 상태" required><Select value={str(draft.rightsStatus)} onChange={(rightsStatus) => update({ rightsStatus })} choices={[["pending", "확인 대기"], ["cleared", "확인됨"], ["flagged", "문제 있음"]]} /></Field>
+  </>;
+}
+
+type Figure = { label: string; value: string };
+
+// "그 후 실제로는": facts from official data after a statement or evaluation.
+// No verdict field on purpose: the page puts words and facts side by side.
+function OutcomeForm({ draft, update, refs }: FormProps) {
+  const subject = (draft.subject ?? { type: "statement", id: "" }) as { type: string; id: string };
+  const names = new Map(refs.people.map((item) => [item.id, str(item.name)]));
+  const records = subject.type === "evaluation"
+    ? withStatus(refs.evaluations, (item) => `${str((item.evaluator as { name?: string } | undefined)?.name)} → ${names.get(str(item.targetPersonId)) ?? "?"} · ${str(item.claim).slice(0, 50)}`)
+    : withStatus(refs.statements, (item) => `${names.get(str(item.personId)) ?? "?"} · ${str(item.headline)}`);
+  const figures = list<Figure>(draft.figures);
+  return <>
+    <p className={`${styles.help} ${styles.wide}`}>말한 뒤 실제로 어떻게 됐는지를 공식 통계·기관 자료로 적습니다. &lsquo;맞았다·틀렸다&rsquo;는 쓰지 않습니다. 이재명 대통령의 약속·예측에도 똑같이 붙입니다.</p>
+    <Field label="대상 종류" required><Select value={subject.type} onChange={(type) => update({ subject: { type, id: "" } })} choices={[["statement", "언행"], ["evaluation", "평가(시선)"]]} /></Field>
+    <Field label="대상 기록" required hint="공개하려면 대상 기록도 공개 상태여야 합니다"><Select value={subject.id} onChange={(id) => update({ subject: { ...subject, id } })} choices={toChoices(records)} placeholder="고르세요" /></Field>
+    <Field label="기준일" required hint="아래 사실이 가리키는 날짜(통계 기준일 등)"><input type="date" value={str(draft.asOf)} onChange={(event) => update({ asOf: event.target.value })} /></Field>
+    <Field label="사실 서술" required wide hint="주어는 자료입니다. 예: '서울 아파트 착공은 2026년 상반기 1만3121호였다(국토부).' 평가하는 말을 넣지 않습니다"><textarea value={str(draft.summary)} onChange={(event) => update({ summary: event.target.value })} /></Field>
+    <Field label="수치" optional wide hint="한 줄에 '항목 | 값', 최대 6개. 예: 상반기 착공 | 1만3121호">
+      <CommitInput value={figures} format={(current) => (current as Figure[]).map((item) => `${item.label} | ${item.value}`).join("\n")} parse={(text) => text.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => { const [label, ...value] = line.split("|"); return { label: label.trim(), value: value.join("|").trim() }; }).filter((item) => item.label && item.value).slice(0, 6)} onCommit={(value) => update({ figures: value })} />
+    </Field>
+    <CitationList value={list<Citation>(draft.citations)} sources={refs.sources} onChange={(citations) => update({ citations })} />
+    <Status draft={draft} update={update} />
+    <Corrections draft={draft} update={update} />
   </>;
 }
 

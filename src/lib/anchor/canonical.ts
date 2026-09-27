@@ -1,4 +1,4 @@
-import type { Citation, Evaluation, Statement } from "@/content/schema";
+import type { Citation, Evaluation, Outcome, Statement } from "@/content/schema";
 
 // The exact bytes whose SHA-256 goes on chain. Server and browser both run
 // this, so it must stay pure and deterministic: keys sorted, strings in NFC,
@@ -8,7 +8,7 @@ import type { Citation, Evaluation, Statement } from "@/content/schema";
 // changes, and keep the old rule so old anchors can still be checked.
 
 export const ANCHOR_FORMAT = "imtong-anchor/1";
-export const ANCHOR_TYPES = ["statement", "evaluation"] as const;
+export const ANCHOR_TYPES = ["statement", "evaluation", "outcome"] as const;
 export type AnchorType = (typeof ANCHOR_TYPES)[number];
 
 type SourceRef = { url: string; videoId: string | null };
@@ -83,6 +83,30 @@ export function evaluationPayload(value: Evaluation, sources: SourceRefs) {
     respondsTo: value.respondsTo,
     corrections: value.corrections,
   };
+}
+
+export function outcomePayload(value: Outcome, sources: SourceRefs) {
+  return {
+    schema: ANCHOR_FORMAT,
+    type: "outcome",
+    id: value.id,
+    subject: value.subject,
+    asOf: value.asOf,
+    summary: value.summary,
+    figures: value.figures,
+    citations: value.citations.map((item) => citation(item, sources)),
+    corrections: value.corrections,
+  };
+}
+
+export type AnchoredRecord = Statement | Evaluation | Outcome;
+
+export function payloadFor(type: AnchorType, value: AnchoredRecord, sources: SourceRefs) {
+  switch (type) {
+    case "statement": return statementPayload(value as Statement, sources);
+    case "evaluation": return evaluationPayload(value as Evaluation, sources);
+    case "outcome": return outcomePayload(value as Outcome, sources);
+  }
 }
 
 // Web Crypto exists in browsers and in Node 20+, so one function serves both.

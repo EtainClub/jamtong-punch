@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import type { Citation, Evaluation, Person } from "@/content/schema";
+import type { Citation, Evaluation, Outcome, Person } from "@/content/schema";
 import type { Credited, SourceView, StatementView } from "@/lib/archive/read";
 import { citationHref, citationLabel, evaluationFormatLabels, formatDate, formatShortDate, formatTimecode, statementKindLabels } from "@/lib/content/format";
 import type { Stance } from "@/lib/domain";
@@ -111,16 +111,40 @@ function SpeakerBadge({ verified }: { verified: boolean }) {
   return <span className={styles.badge} title="원본에서 이 사람의 말인지 아직 확인하지 않았습니다">화자 확인 전</span>;
 }
 
+export type Outcomes = Record<string, Outcome[]>;
+
+// What happened after the words, from official data. Shown beside the words,
+// never as a verdict on them: the reader compares.
+function OutcomeList({ items, sources }: { items?: Outcome[]; sources: Sources }) {
+  if (!items?.length) return null;
+  return <section className={styles.outcomes} aria-label="그 후 실제로는">
+    <h4>그 후 실제로는</h4>
+    {items.map((item) => <div key={item.id} className={styles.outcome}>
+      <p className={styles.meta}><time dateTime={item.asOf}>{formatShortDate(item.asOf)} 기준</time></p>
+      <p className={styles.outcomeText}>{item.summary}</p>
+      {item.figures.length > 0 && <dl className={styles.figures}>{item.figures.map((figure, index) => <div key={index}><dt>{figure.label}</dt><dd>{figure.value}</dd></div>)}</dl>}
+      <CitationLinks citations={item.citations} sources={sources} />
+      <div className={styles.links}>
+        <Link className={styles.verifyLink} href={`/verify/outcome/${item.id}`}>⛓ 블록체인 대조</Link>
+        {item.corrections.length > 0 && <span>정정 {item.corrections.length}건: {item.corrections.map((correction) => `${formatShortDate(correction.at)} ${correction.note}`).join(" · ")}</span>}
+      </div>
+    </div>)}
+    <p className={styles.outcomeNote}>임통은 말의 옳고 그름을 판정하지 않습니다. 공식 자료로 확인한 그 뒤의 사실을 나란히 둡니다.</p>
+  </section>;
+}
+
 function AssertionBadge({ type }: { type: string }) {
   // "pending" colour marks claims and interpretations: not verified, not wrong.
   if (type === "FACT") return null;
   return <span className={styles.badge}>{type === "CLAIM" ? "주장" : "해석"}</span>;
 }
 
-export function StatementCard({ statement, sources, names, topics, showSpeaker = false, withYear, compareHref, stats }: {
+export function StatementCard({ statement, sources, names, topics, showSpeaker = false, withYear, compareHref, stats, outcomes }: {
   statement: StatementView; sources: Sources; names: Names; topics: Names; showSpeaker?: boolean; withYear?: boolean; compareHref?: (topicId: string) => string;
   /** Participation counts per statement id; when given, the card offers punch/cheer. */
   stats?: Record<string, StanceCounts>;
+  /** "그 후 실제로는" per record id; their sources must be in `sources`. */
+  outcomes?: Outcomes;
 }) {
   const mentioned = statement.mentionedPersonIds.filter((id) => names[id]);
   return <article className={styles.card}>
@@ -137,6 +161,7 @@ export function StatementCard({ statement, sources, names, topics, showSpeaker =
     <CitationLinks citations={statement.citations} sources={sources} />
     <Transcripts citations={statement.citations} sources={sources} />
     <details className={styles.context}><summary>맥락</summary><p>{statement.context}</p></details>
+    <OutcomeList items={outcomes?.[statement.id]} sources={sources} />
     <div className={styles.links}>
       {statement.topicIds.filter((id) => topics[id]).map((id) => <Link key={id} className={styles.tag} href={compareHref ? compareHref(id) : `/topics/${id}`}>#{topics[id]}{compareHref ? " · 같은 주제 발언" : ""}</Link>)}
       {mentioned.map((id) => <Link key={id} href={`/people/${id}`}>언급: {names[id]}</Link>)}
@@ -176,8 +201,8 @@ export function StatementTimeline({ statements, ...props }: { statements: Statem
   </section>)}</>;
 }
 
-export function EvaluationCard({ evaluation, sources, names, topics, responses = [], showTarget = false }: {
-  evaluation: Evaluation & Credited; sources: Sources; names: Names; topics: Names; responses?: Evaluation[]; showTarget?: boolean;
+export function EvaluationCard({ evaluation, sources, names, topics, responses = [], showTarget = false, outcomes }: {
+  evaluation: Evaluation & Credited; sources: Sources; names: Names; topics: Names; responses?: Evaluation[]; showTarget?: boolean; outcomes?: Outcomes;
 }) {
   const evaluatorName = evaluation.evaluator.personId && names[evaluation.evaluator.personId]
     ? <Link href={`/people/${evaluation.evaluator.personId}`}>{evaluation.evaluator.name}</Link>
@@ -190,6 +215,7 @@ export function EvaluationCard({ evaluation, sources, names, topics, responses =
     {evaluation.quote && <blockquote className={styles.quote}>“{evaluation.quote}”</blockquote>}
     <CitationLinks citations={[evaluation.citation]} sources={sources} />
     <Transcripts citations={[evaluation.citation]} sources={sources} />
+    <OutcomeList items={outcomes?.[evaluation.id]} sources={sources} />
     <div className={styles.links}>
       {evaluation.topicIds.filter((id) => topics[id]).map((id) => <Link key={id} className={styles.tag} href={`/topics/${id}`}>#{topics[id]}</Link>)}
       {evaluation.eventIds.map((id) => <Link key={id} href={`/events/${id}`}>관련 사건</Link>)}

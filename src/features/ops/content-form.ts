@@ -13,6 +13,7 @@ export const contentTypes = [
   ["topics", "쟁점"],
   ["sources", "출처"],
   ["brackets", "월드컵"],
+  ["outcomes", "결과"],
 ] as const;
 
 export type ContentType = (typeof contentTypes)[number][0];
@@ -43,6 +44,7 @@ export function emptyDraft(type: ContentType): Draft {
     case "topics": return { id: generatedId("topic"), name: "", description: "", parentId: null, ...base };
     case "sources": return { id: generatedId("source"), kind: "article", title: "", publisher: "", url: "", archiveUrl: null, publishedAt: today(), description: null, capturedAt: today(), video: null, license: "link-only", rightsStatus: "pending" };
     case "brackets": return { id: generatedId("bracket"), status: "draft", questionId: "more-problematic", statementIds: [] };
+    case "outcomes": return { id: generatedId("outcome"), subject: { type: "statement", id: "" }, asOf: today(), summary: "", figures: [], citations: [emptyCitation()], ...base };
   }
 }
 
@@ -92,6 +94,10 @@ export function itemLabel(type: ContentType, item: Draft, names: Map<string, str
     case "topics": return text("name") || item.id;
     case "sources": return text("title") || text("publisher") || item.id;
     case "brackets": return item.id;
+    case "outcomes": {
+      const subject = item.subject as { id?: string } | undefined;
+      return `${subject?.id || "?"} · ${text("summary").slice(0, 40) || item.id}`;
+    }
   }
 }
 

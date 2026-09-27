@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { EvaluationCard, nameMap, SiteHeader } from "@/features/archive/components";
 import { evaluationShare } from "@/features/archive/share-text";
 import styles from "@/features/archive/archive.module.css";
-import { getPublishedRecord, getSources, listPeople, listTopics, sourceIdsOf, type EvaluationView } from "@/lib/archive/read";
+import { getPublishedRecord, getSources, listPeople, listTopics, outcomesFor, sourceIdsOf, type EvaluationView } from "@/lib/archive/read";
 import { shareMetadata } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -28,13 +28,14 @@ export default async function EvaluationPage({ params }: Props) {
   const { id } = await params;
   const evaluation = await load(id);
   if (!evaluation) notFound();
-  const [people, topics, sources] = await Promise.all([listPeople(), listTopics(), getSources(sourceIdsOf([evaluation]))]);
+  const outcomes = await outcomesFor([evaluation.id]);
+  const [people, topics, sources] = await Promise.all([listPeople(), listTopics(), getSources(sourceIdsOf([evaluation, ...Object.values(outcomes).flat()]))]);
   const names = nameMap(people);
   return <>
     <SiteHeader />
     <main className={styles.shell}>
       <section className={styles.hero}><p className={styles.eyebrow}>시선</p></section>
-      <EvaluationCard evaluation={evaluation} sources={sources} names={names} topics={nameMap(topics)} showTarget />
+      <EvaluationCard evaluation={evaluation} sources={sources} names={names} topics={nameMap(topics)} outcomes={outcomes} showTarget />
       <p className={styles.more}><Link href={`/people/${evaluation.targetPersonId}?tab=views`}>{names[evaluation.targetPersonId]}에 대한 시선 전체 보기 →</Link></p>
     </main>
   </>;

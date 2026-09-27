@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
-import type { Bracket, Evaluation, Event, Person, Relationship, Source, SourceAvailability, Statement, Topic } from "@/content/schema";
+import type { Bracket, Evaluation, Event, Outcome, Person, Relationship, Source, SourceAvailability, Statement, Topic } from "@/content/schema";
+import type { AnchorType } from "@/lib/anchor/canonical";
 import type { AnchorVersion } from "@/lib/anchor/versions";
 import { authored } from "@/lib/content/store";
 import { db } from "@/lib/firebase/admin";
@@ -31,6 +32,7 @@ const credit = (snapshot: Snapshot): string | null => snapshot.get("contributor.
 const statement = (snapshot: Snapshot): StatementView => ({ ...authored("statements", snapshot.data()!), mentionedPersonIds: snapshot.get("mentionedPersonIds") ?? [], contributor: credit(snapshot) });
 const evaluation = (snapshot: Snapshot): EvaluationView => ({ ...authored("evaluations", snapshot.data()!), contributor: credit(snapshot) });
 const event = (snapshot: Snapshot): Event => authored("events", snapshot.data()!);
+const outcome = (snapshot: Snapshot): Outcome => authored("outcomes", snapshot.data()!);
 const topic = (snapshot: Snapshot): TopicView => ({ ...authored("topics", snapshot.data()!), counts: snapshot.get("counts") ?? { statements: 0, evaluations: 0, events: 0, people: 0 } });
 const published = (collection: string) => db.collection(collection).where("status", "==", "published");
 
@@ -173,7 +175,20 @@ export const getSources = unstable_cache(async (ids: string[]): Promise<Record<s
   return Object.fromEntries(snapshots.filter((snapshot) => snapshot.exists).map((snapshot) => [snapshot.id, { ...authored("sources", snapshot.data()!), availability: snapshot.get("availability") ?? null }]));
 }, ["archive", "sources"], CACHE);
 
-export function sourceIdsOf(items: Array<Statement | Evaluation | Event>): string[] {
+// "그 후 실제로는" for a set of statements and evaluations, keyed by the
+// record they follow, oldest fact first. Ids are unique across both types.
+export const outcomesFor = unstable_cache(async (subjectIds: string[]): Promise<Record<string, Outcome[]>> => {
+  const unique = [...new Set(subjectIds)].sort();
+  const result: Record<string, Outcome[]> = {};
+  for (let offset = 0; offset < unique.length; offset += 30) {
+    const snapshots = await published("outcomes").where("subject.id", "in", unique.slice(offset, offset + 30)).get();
+    for (const item of snapshots.docs.map(outcome)) (result[item.subject.id] ??= []).push(item);
+  }
+  for (const items of Object.values(result)) items.sort((left, right) => left.asOf.localeCompare(right.asOf));
+  return result;
+}, ["archive", "outcomes-for"], CACHE);
+
+export function sourceIdsOf(items: Array<Statement | Evaluation | Event | Outcome>): string[] {
   return items.flatMap((item) => ("citation" in item ? [item.citation.sourceId] : item.citations.map((citation) => citation.sourceId)));
 }
 
@@ -200,13 +215,22 @@ export const getEvidence = unstable_cache(async (statementIds: string[], evaluat
   };
 }, ["archive", "evidence"], CACHE);
 
-export const getAnchorVersions = unstable_cache(async (type: "statement" | "evaluation", id: string) => {
+export const getAnchorVersions = unstable_cache(async (type: AnchorType, id: string) => {
   const snapshot = await db.doc(`anchors/${type}_${id}`).get();
   return (snapshot.get("versions") ?? []) as AnchorVersion[];
 }, ["archive", "anchor"], CACHE);
 
-export const getPublishedRecord = unstable_cache(async (type: "statement" | "evaluation", id: string) => {
-  const snapshot = await db.doc(`${type === "statement" ? "statements" : "evaluations"}/${id}`).get();
+export type PublishedRecord =
+  | { type: "statement"; value: StatementView }
+  | { type: "evaluation"; value: EvaluationView }
+  | { type: "outcome"; value: Outcome };
+
+export const getPublishedRecord = unstable_cache(async (type: AnchorType, id: string): Promise<PublishedRecord | null> => {
+  const snapshot = await db.doc(`${type}s/${id}`).get();
   if (!snapshot.exists || snapshot.get("status") !== "published") return null;
-  return type === "statement" ? { type, value: statement(snapshot) } : { type, value: evaluation(snapshot) };
+  switch (type) {
+    case "statement": return { type, value: statement(snapshot) };
+    case "evaluation": return { type, value: evaluation(snapshot) };
+    case "outcome": return { type, value: outcome(snapshot) };
+  }
 }, ["archive", "published-record"], CACHE);
