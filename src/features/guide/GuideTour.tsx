@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MIN_PARTICIPANTS } from "@/lib/stats/present";
 import { CHAPTERS, type Part } from "./chapters";
 import styles from "./guide.module.css";
 
@@ -56,7 +57,7 @@ export function GuideTour() {
         <p className={`${styles.mockCount} ${on("count")}`}>오늘 이 인물에 대한 내 입장 <b>1건</b></p>
         <div className={on("ratio")}>
           <div className={styles.mockBar}><span style={{ width: "58%" }} /></div>
-          <p className={styles.mockNote}>30일 · 참여 30명부터 비율을 표시합니다</p>
+          <p className={styles.mockNote}>30일 · 참여 {MIN_PARTICIPANTS}명부터 비율을 표시합니다</p>
         </div>
       </div>}
     </div>

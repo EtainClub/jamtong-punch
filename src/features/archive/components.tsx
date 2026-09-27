@@ -5,7 +5,7 @@ import type { Citation, Evaluation, Outcome, Person } from "@/content/schema";
 import type { Credited, SourceView, StatementView } from "@/lib/archive/read";
 import { citationHref, citationLabel, evaluationFormatLabels, formatDate, formatShortDate, formatTimecode, statementKindLabels } from "@/lib/content/format";
 import type { Stance } from "@/lib/domain";
-import { present } from "@/lib/stats/present";
+import { MIN_PARTICIPANTS, present } from "@/lib/stats/present";
 import { AccountMenu } from "./AccountMenu";
 import { ReportButton } from "./ReportButton";
 import { ShareButton } from "./ShareButton";
@@ -184,7 +184,7 @@ function Reaction({ id, counts }: { id: string; counts?: StanceCounts }) {
   const figure = present(counts ?? { punch: 0, cheer: 0, unknown: 0 });
   return <div className={styles.reaction}>
     <StanceButtons kind="statement" id={id} options={["punch", "cheer", "unknown"]} note="언행에 대한 입장은 한 사람에 1건, 가장 최근 입장만 셉니다." />
-    <p className={styles.figure}>{counts?.hidden ? RATIOS_HIDDEN_NOTE : <>참여 {figure.n.toLocaleString("ko-KR")}명 · {figure.ratio === null ? "30명부터 비율을 표시합니다" : <b>펀치 {figure.ratio}%</b>} · 임통 참여자의 기록이며 여론조사가 아닙니다</>}</p>
+    <p className={styles.figure}>{counts?.hidden ? RATIOS_HIDDEN_NOTE : <>참여 {figure.n.toLocaleString("ko-KR")}명 · {figure.ratio === null ? `${MIN_PARTICIPANTS}명부터 비율을 표시합니다` : <b>펀치 {figure.ratio}%</b>} · 임통 참여자의 기록이며 여론조사가 아닙니다</>}</p>
   </div>;
 }
 

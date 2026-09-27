@@ -7,7 +7,7 @@ import styles from "@/features/archive/archive.module.css";
 import { RelationsSection } from "@/features/archive/RelationsSection";
 import { getPerson, getSources, listPeople, listTopics, outcomesFor, personEvaluations, personEvaluationsGiven, personStatements, personTopicIds, sourceIdsOf, type PersonView, type StatementView } from "@/lib/archive/read";
 import { formatShortDate } from "@/lib/content/format";
-import { present } from "@/lib/stats/present";
+import { MIN_PARTICIPANTS, present } from "@/lib/stats/present";
 import { ReportButton } from "@/features/archive/ReportButton";
 import { getPublicSubjectStats, getRatioFlags, getStatementStats, ratioHidden } from "@/lib/stats/read";
 import { StanceButtons } from "@/features/archive/StanceButtons";
@@ -81,7 +81,7 @@ async function Profile({ person }: { person: PersonView }) {
     {person.playable && <div className={styles.participation}>
       {hidden ? <p>{RATIOS_HIDDEN_NOTE}</p> : d30 && d30.ratio !== null
         ? <p>30일 · 참여 {d30.n.toLocaleString("ko-KR")}명 · <span className={styles.punch}>펀치 {d30.ratio}%</span></p>
-        : <p>30일 · 참여 {(d30?.n ?? 0).toLocaleString("ko-KR")}명 · 참여 30명부터 표시합니다</p>}
+        : <p>30일 · 참여 {(d30?.n ?? 0).toLocaleString("ko-KR")}명 · 참여 {MIN_PARTICIPANTS}명부터 표시합니다</p>}
       <small>임통 참여자의 기록입니다. 일반 국민 여론이나 여론조사와 다릅니다.</small>
       <div className={styles.playLinks}>
         <Link className={styles.playPunch} href={`/people/${person.id}/play/punch`}>👊 펀치 게임</Link>

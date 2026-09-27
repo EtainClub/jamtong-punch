@@ -1,9 +1,14 @@
 import { describe, expect, test } from "vitest";
-import { present } from "./present";
+import { MIN_PARTICIPANTS, present } from "./present";
 
 describe("present", () => {
   test("masks small samples while preserving awareness", () => {
-    expect(present({ punch: 20, cheer: 9, unknown: 1 })).toEqual({ n: 29, ratio: null, awareness: 97 });
+    expect(MIN_PARTICIPANTS).toBe(10);
+    expect(present({ punch: 6, cheer: 3, unknown: 1 })).toEqual({ n: 9, ratio: null, awareness: 90 });
+  });
+
+  test("shows the ratio from the threshold on", () => {
+    expect(present({ punch: 7, cheer: 3, unknown: 0 })).toEqual({ n: 10, ratio: 70, awareness: 100 });
   });
 
   test("excludes unknown from the ratio denominator", () => {

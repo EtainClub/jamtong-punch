@@ -5,6 +5,7 @@ import { MyData } from "@/features/archive/MyData";
 import styles from "@/features/archive/archive.module.css";
 import { archiveLedger, listPeople } from "@/lib/archive/read";
 import { formatShortDate } from "@/lib/content/format";
+import { MIN_PARTICIPANTS } from "@/lib/stats/present";
 import { shareMetadata } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -84,7 +85,7 @@ export default async function AboutPage() {
         <ul>
           <li><b>여론조사가 아닙니다.</b> 펀치·응원 비율은 임통에 와서 참여한 사람들의 기록입니다. 표본을 뽑은 조사가 아니고, 일반 국민의 의견을 대표하지 않습니다.</li>
           <li><b>한 사람, 한 대상, 하루 1건.</b> 게임을 몇 번 하든, 버튼을 몇 번 누르든 같은 대상에 대한 오늘의 입장은 1건입니다. 게임 점수는 수치에 영향이 없습니다.</li>
-          <li><b>참여가 30명이 되어야 비율을 보여 줍니다.</b> 그보다 적으면 비율은 우연에 크게 흔들립니다.</li>
+          <li><b>참여가 {MIN_PARTICIPANTS}명이 되어야 비율을 보여 줍니다.</b> 그보다 적으면 비율은 우연에 크게 흔들립니다. {MIN_PARTICIPANTS}명을 넘어도 참여자가 적을 때의 비율은 한두 사람의 선택으로 크게 바뀔 수 있으니, 참여 수와 함께 보세요.</li>
           <li><b>선거 기간 등에는 수치를 숨길 수 있습니다.</b> 이때도 입장은 기록되고, 화면에만 나오지 않습니다.</li>
           <li><b>월드컵은 입장이 아닙니다.</b> 비교 결과는 나만 보는 기록이고, 임통은 이것으로 인물 순위를 공개하지 않습니다.</li>
         </ul>
