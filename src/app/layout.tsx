@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { Beacon } from "@/features/metrics/Beacon";
 import { VersionNotice } from "@/features/version/VersionNotice";
 import { FirebaseAuthProvider } from "@/lib/firebase/auth";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
@@ -24,5 +25,5 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { viewportFit: "cover", themeColor: "#fdfcfc" };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  return <html lang="ko"><body><FirebaseAuthProvider>{children}</FirebaseAuthProvider><VersionNotice /></body></html>;
+  return <html lang="ko"><body><FirebaseAuthProvider>{children}</FirebaseAuthProvider><VersionNotice /><Beacon /></body></html>;
 }

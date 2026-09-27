@@ -30,7 +30,8 @@ function single(value: string | string[] | undefined) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const person = await getPerson((await params).slug);
-  return person ? shareMetadata(person.name, `${person.name}의 언행, 다른 사람들의 평가, 발언으로 이어진 관계를 원자료와 함께 봅니다.`) : {};
+  if (!person) return {};
+  return shareMetadata(`${person.name} 발언·평가 모음`, `${person.name} — ${currentRole(person).replace(/\.$/, "")}. 직접 한 말 ${person.counts.statements + person.counts.evaluationsGiven}건, 다른 사람들의 평가 ${person.counts.evaluationsReceived}건을 원자료와 함께 봅니다.`, `/people/${person.id}`);
 }
 
 export default async function PersonPage({ params, searchParams }: Props) {

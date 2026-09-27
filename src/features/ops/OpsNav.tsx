@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./ops-pages.module.css";
 
-const LINKS = [["/ops/status", "상태"], ["/ops/content", "콘텐츠"], ["/ops/reports", "신고"], ["/ops/settings", "설정"]] as const;
+const LINKS = [["/ops/status", "상태"], ["/ops/metrics", "지표"], ["/ops/content", "콘텐츠"], ["/ops/reports", "신고"], ["/ops/settings", "설정"]] as const;
 
 export function OpsNav() {
   const path = usePathname();

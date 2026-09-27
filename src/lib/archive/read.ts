@@ -192,6 +192,33 @@ export function sourceIdsOf(items: Array<Statement | Evaluation | Event | Outcom
   return items.flatMap((item) => ("citation" in item ? [item.citation.sourceId] : item.citations.map((citation) => citation.sourceId)));
 }
 
+export type LedgerCorrection = { at: string; note: string; kind: "statement" | "evaluation" | "outcome"; id: string; label: string };
+
+// What /about shows about the archive itself: how much is public, every
+// correction made to a public record, and how many records were taken down.
+export const archiveLedger = unstable_cache(async () => {
+  const [statements, evaluations, outcomes, archived] = await Promise.all([
+    published("statements").select("headline", "corrections").get(),
+    published("evaluations").select("claim", "corrections").get(),
+    published("outcomes").select("summary", "corrections").get(),
+    Promise.all(["statements", "evaluations", "outcomes"].map((name) => db.collection(name).where("status", "==", "archived").count().get())),
+  ]);
+  const corrections = (kind: LedgerCorrection["kind"], docs: Snapshot[], field: string, base: string): LedgerCorrection[] =>
+    docs.flatMap((snapshot) => ((snapshot.get("corrections") ?? []) as Array<{ at: string; note: string }>)
+      .map((item) => ({ ...item, kind, id: snapshot.id, label: String(snapshot.get(field) ?? "").slice(0, 60) || `${base}/${snapshot.id}` })));
+  return {
+    statements: statements.size,
+    evaluations: evaluations.size,
+    outcomes: outcomes.size,
+    archived: archived.reduce((sum, result) => sum + result.data().count, 0),
+    corrections: [
+      ...corrections("statement", statements.docs, "headline", "statements"),
+      ...corrections("evaluation", evaluations.docs, "claim", "evaluations"),
+      ...corrections("outcome", outcomes.docs, "summary", "outcomes"),
+    ].sort((left, right) => right.at.localeCompare(left.at)),
+  };
+}, ["archive", "ledger"], CACHE);
+
 export const getRelationship = unstable_cache(async (pairId: string): Promise<Relationship | null> => {
   const snapshot = await db.doc(`relationships/${pairId}`).get();
   if (!snapshot.exists) return null;

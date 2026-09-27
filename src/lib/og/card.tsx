@@ -29,17 +29,23 @@ type Card = {
   // A plain line under the title (a person's role), not a quotation.
   subtitle?: string | null;
   footer?: string | null;
+  // "그 후 실제로는": what official data showed afterwards, as one line.
+  outcome?: { asOf: string; text: string } | null;
 };
 
 // One layout for every shared page: what it is, the headline, an optional
 // quote, and the site. Colors are globals.css tokens (eggshell, ink, burgundy, graphite, smoke).
 // No faces: shared images carry records and numbers only (implementation-design 4장·11장).
-export async function ogCard({ eyebrow, title, quote, subtitle, footer }: Card): Promise<ImageResponse> {
+export async function ogCard({ eyebrow, title, quote, subtitle, footer, outcome }: Card): Promise<ImageResponse> {
   const heading = clip(title, 54);
-  const body = quote ? `“${clip(quote, 110)}”` : null;
+  const body = quote ? `“${clip(quote, outcome ? 70 : 110)}”` : null;
   const line = subtitle ? clip(subtitle, 60) : null;
-  const bold = [SITE_NAME, eyebrow, heading].join("");
-  const regular = [body ?? "", line ?? "", footer ?? "", "im.jamtong.kr · 원자료로 끝나는 인물 아카이브"].join("");
+  const after = outcome ? { label: `그 후 실제로는 · ${outcome.asOf} 기준`, text: clip(outcome.text, 64) } : null;
+  const bold = [SITE_NAME, eyebrow, heading, after?.label ?? ""].join("");
+  // With a result on the card the site line shortens so the footer fits.
+  const site = after ? "im.jamtong.kr" : "im.jamtong.kr · 원자료로 끝나는 인물 아카이브";
+  const foot = footer ? clip(footer, after ? 48 : 40) : "";
+  const regular = [body ?? "", line ?? "", foot, after?.text ?? "", site].join("");
   const [boldFont, regularFont] = await Promise.all([koreanFont(bold, 800), koreanFont(regular, 400)]);
   return new ImageResponse(
     <div style={{ display: "flex", width: "100%", height: "100%", flexDirection: "column", justifyContent: "space-between", background: "#fdfcfc", padding: "64px 72px", color: "#000000", fontFamily: "Noto Sans KR" }}>
@@ -50,14 +56,18 @@ export async function ogCard({ eyebrow, title, quote, subtitle, footer }: Card):
       <div style={{ display: "flex", alignItems: "center", gap: 48 }}>
 
         <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 24 }}>
-          <div style={{ display: "flex", fontSize: heading.length > 30 ? 56 : 68, fontWeight: 800, lineHeight: 1.25, letterSpacing: -1.5, wordBreak: "keep-all" }}>{heading}</div>
+          <div style={{ display: "flex", fontSize: after ? (heading.length > 30 ? 46 : 56) : heading.length > 30 ? 56 : 68, fontWeight: 800, lineHeight: 1.25, letterSpacing: -1.5, wordBreak: "keep-all" }}>{heading}</div>
           {line && <div style={{ display: "flex", color: "#44403b", fontSize: 34, wordBreak: "keep-all" }}>{line}</div>}
-          {body && <div style={{ display: "flex", borderLeft: "6px solid #8a2233", paddingLeft: 24, color: "#44403b", fontSize: 32, lineHeight: 1.5, wordBreak: "keep-all" }}>{body}</div>}
+          {body && <div style={{ display: "flex", borderLeft: "6px solid #8a2233", paddingLeft: 24, color: "#44403b", fontSize: after ? 28 : 32, lineHeight: 1.5, wordBreak: "keep-all" }}>{body}</div>}
+          {after && <div style={{ display: "flex", flexDirection: "column", gap: 6, borderRadius: 16, background: "#e3e9f4", padding: "16px 24px" }}>
+            <div style={{ display: "flex", color: "#16366b", fontSize: 24, fontWeight: 800 }}>{after.label}</div>
+            <div style={{ display: "flex", color: "#000000", fontSize: 28, lineHeight: 1.4, wordBreak: "keep-all" }}>{after.text}</div>
+          </div>}
         </div>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", color: "#777169", fontSize: 26 }}>
-        <span>{footer ?? ""}</span>
-        <span>im.jamtong.kr · 원자료로 끝나는 인물 아카이브</span>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 24, color: "#777169", fontSize: 26 }}>
+        <span>{foot}</span>
+        <span>{site}</span>
       </div>
     </div>,
     {

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EvaluationCard, nameMap, SiteHeader } from "@/features/archive/components";
+import { shareExtras } from "@/features/archive/share-extras";
+import { OtherVoices, ShareWelcome } from "@/features/archive/ShareLanding";
 import { evaluationShare } from "@/features/archive/share-text";
 import styles from "@/features/archive/archive.module.css";
 import { getPublishedRecord, getSources, listPeople, listTopics, outcomesFor, sourceIdsOf, type EvaluationView } from "@/lib/archive/read";
@@ -9,7 +11,7 @@ import { shareMetadata } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 async function load(id: string) {
   const record = await getPublishedRecord("evaluation", id);
@@ -19,13 +21,13 @@ async function load(id: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const [evaluation, people] = await Promise.all([load((await params).id), listPeople()]);
   if (!evaluation) return {};
-  const share = evaluationShare(evaluation, nameMap(people));
-  return shareMetadata(share.title, share.description);
+  const share = evaluationShare(evaluation, nameMap(people), await shareExtras(evaluation.id, [evaluation.citation]));
+  return shareMetadata(share.title, share.description, `/evaluations/${evaluation.id}`);
 }
 
 // One evaluation on its own page, so it can be linked and shared.
-export default async function EvaluationPage({ params }: Props) {
-  const { id } = await params;
+export default async function EvaluationPage({ params, searchParams }: Props) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   const evaluation = await load(id);
   if (!evaluation) notFound();
   const outcomes = await outcomesFor([evaluation.id]);
@@ -35,8 +37,10 @@ export default async function EvaluationPage({ params }: Props) {
     <SiteHeader />
     <main className={styles.shell}>
       <section className={styles.hero}><p className={styles.eyebrow}>시선</p></section>
+      {query.s === "1" && <ShareWelcome />}
       <EvaluationCard evaluation={evaluation} sources={sources} names={names} topics={nameMap(topics)} outcomes={outcomes} showTarget />
       <p className={styles.more}><Link href={`/people/${evaluation.targetPersonId}?tab=views`}>{names[evaluation.targetPersonId]}에 대한 시선 전체 보기 →</Link></p>
+      <OtherVoices topicIds={evaluation.topicIds} recordId={evaluation.id} speakerId={evaluation.evaluator.personId} names={names} />
     </main>
   </>;
 }

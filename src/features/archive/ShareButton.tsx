@@ -6,10 +6,12 @@ import styles from "./archive.module.css";
 
 // Opens the phone's share sheet where there is one, otherwise copies the
 // link. Always the canonical domain, whichever host the page was opened on.
+// ?s=1 marks a shared link, so the page can greet whoever opens it and visit
+// counts can tell shares apart; the page's canonical URL stays without it.
 export function ShareButton({ path, title }: { path: string; title: string }) {
   const [copied, setCopied] = useState(false);
   async function share() {
-    const url = `${SITE_URL}${path}`;
+    const url = `${SITE_URL}${path}${path.includes("?") ? "&" : "?"}s=1`;
     if (navigator.share) {
       try { await navigator.share({ title, url }); return; }
       catch (error) { if ((error as DOMException).name === "AbortError") return; }

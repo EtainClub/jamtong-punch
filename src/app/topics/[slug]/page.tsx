@@ -22,7 +22,16 @@ type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<s
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const topic = (await listTopics()).find((item) => item.id === slug);
-  return topic ? shareMetadata(`#${topic.name}`, topic.description) : {};
+  if (!topic) return {};
+  // Written the way people search a topic: the topic, who spoke on it, how much.
+  const [statements, evaluations, people] = await Promise.all([topicStatements(slug, 40), topicEvaluations(slug), listPeople()]);
+  const names = nameMap(people);
+  const counts = new Map<string, number>();
+  for (const name of [...statements.items.map((item) => names[item.personId]), ...evaluations.map((item) => item.evaluator.name)]) if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+  const speakers = [...counts].sort((left, right) => right[1] - left[1]).slice(0, 4).map(([name]) => name);
+  const total = topic.counts.statements + topic.counts.evaluations;
+  const who = speakers.length ? `${speakers.join("·")}${counts.size > speakers.length ? " 등" : ""}` : "";
+  return shareMetadata(`#${topic.name}: 누가 뭐라고 했나`, `${topic.description}. ${who ? `${who}의 ` : ""}발언과 평가 ${total}건을 원자료와 함께, 그 뒤 실제로 어떻게 됐는지까지 봅니다.`, `/topics/${topic.id}`);
 }
 
 export default async function TopicPage({ params, searchParams }: Props) {
