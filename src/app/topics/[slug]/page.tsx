@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ComparePicker } from "@/features/archive/ComparePicker";
 import { Avatar, Empty, EvaluationCard, MoreLink, nameMap, SiteHeader, StatementCard } from "@/features/archive/components";
 import styles from "@/features/archive/archive.module.css";
+import { lifeDoor } from "@/features/archive/life";
 import { getSources, listPeople, listTopics, outcomesFor, sourceIdsOf, topicEvaluations, topicEvents, topicStatements, type StatementView } from "@/lib/archive/read";
 import { formatShortDate } from "@/lib/content/format";
 import { getStatementStats } from "@/lib/stats/read";
@@ -36,6 +37,11 @@ export default async function TopicPage({ params, searchParams }: Props) {
   const outcomes = await outcomesFor([...statements.items, ...evaluations].map((item) => item.id));
   const [sources, stats] = await Promise.all([getSources(sourceIdsOf([...statements.items, ...evaluations, ...Object.values(outcomes).flat()])), getStatementStats(statements.items.map((item) => item.id))]);
   const names = nameMap(people);
+  // Records that already have "그 후 실제로는", newest words first.
+  const said = [
+    ...statements.items.map((item) => ({ id: item.id, at: item.occurredAt, who: names[item.personId] ?? "", text: item.headline, href: `/statements/${item.id}` })),
+    ...evaluations.map((item) => ({ id: item.id, at: item.occurredAt, who: `${item.evaluator.name} → ${names[item.targetPersonId] ?? ""}`, text: item.claim, href: `/evaluations/${item.id}` })),
+  ].filter((item) => outcomes[item.id]).sort((left, right) => right.at.localeCompare(left.at));
   const topicNames = nameMap(topics);
   const byId = new Map(people.map((person) => [person.id, person]));
   // Grouped by speaker, the speaker with the most statements first, so the
@@ -67,7 +73,7 @@ export default async function TopicPage({ params, searchParams }: Props) {
     <SiteHeader current="topics" />
     <main className={styles.shell}>
       <section className={styles.hero}>
-        <p className={styles.eyebrow}>쟁점{parent && <> · <Link href={`/topics/${parent.id}`}>#{parent.name}</Link></>}</p>
+        <p className={styles.eyebrow}>{lifeDoor(topic.id) ? `${lifeDoor(topic.id)!.icon} 생활 쟁점` : "쟁점"}{parent && <> · <Link href={`/topics/${parent.id}`}>#{parent.name}</Link></>}</p>
         <h1>#{topic.name}</h1>
         <p>{topic.description}</p>
         {children.length > 0 && <ul className={styles.chips}>{children.map((child) => <li key={child.id}><Link className={styles.chip} href={`/topics/${child.id}`}>#{child.name}</Link></li>)}</ul>}
@@ -76,6 +82,18 @@ export default async function TopicPage({ params, searchParams }: Props) {
       {(speakers.length > 0 || targets.length > 0) && <section className={styles.topicSummary} aria-label="이 쟁점의 인물">
         {speakers.length > 0 && <div><h2>말한 사람</h2><ul>{speakers.map(([personId, items]) => <li key={personId}><Link href={`${viewHref("people")}#speaker-${personId}`}><Avatar person={byId.get(personId)!} size={28} />{names[personId]}<b>{items.length}</b></Link></li>)}</ul></div>}
         {targets.length > 0 && <div><h2>평가받은 사람</h2><ul>{targets.map(([personId, count]) => <li key={personId}><Link href={`/people/${personId}?tab=views`}><Avatar person={byId.get(personId)!} size={28} />{names[personId]}<b>{count}</b></Link></li>)}</ul></div>}
+      </section>}
+
+      {said.length > 0 && <section className={styles.section} aria-labelledby="words-facts-title">
+        <div className={styles.sectionHead}><h2 id="words-facts-title">말과 결과</h2></div>
+        <p className={styles.note}>누가 무엇을 말했고, 그 뒤 공식 자료로 확인된 사실은 무엇인지 나란히 놓았습니다. 임통은 옳고 그름을 판정하지 않습니다.</p>
+        <ol className={styles.wordsFacts}>{said.map((item) => {
+          const fact = outcomes[item.id].at(-1)!;
+          return <li key={item.id}>
+            <div><small>{item.who} · {formatShortDate(item.at)}</small><Link href={item.href}>{item.text}</Link></div>
+            <div className={styles.fact}><small>그 후 실제로는 · {formatShortDate(fact.asOf)} 기준</small><p>{fact.summary}</p></div>
+          </li>;
+        })}</ol>
       </section>}
 
       <nav className={styles.tabs} aria-label="보기 방식">{VIEWS.map(([key, label]) => <Link key={key} href={viewHref(key)} aria-current={view === key ? "page" : undefined}>{label}</Link>)}</nav>

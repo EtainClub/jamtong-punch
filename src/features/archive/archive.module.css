@@ -321,3 +321,29 @@
 .figures dt { color: var(--smoke); font-size: 12px; }
 .figures dd { margin: 0; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .outcomeNote { margin: 0; color: var(--smoke); font-size: 12px; line-height: 1.5; }
+.lifeDoors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 0 24px; padding: 0; list-style: none; }
+.lifeDoors a { display: grid; grid-template-columns: auto minmax(0, 1fr); height: 100%; align-content: start; column-gap: 12px; row-gap: 4px; border: 1px solid var(--stone); border-radius: var(--radius-card); background: white; padding: 14px; color: var(--ink); text-decoration: none; }
+.lifeDoors a > :not(.lifeIcon) { grid-column: 2; }
+.lifeDoors a:hover { border-color: var(--graphite); }
+.lifeIcon { grid-row: 1 / span 4; font-size: 26px; line-height: 1.2; }
+.lifeDoors strong { font-size: 17px; letter-spacing: -.03em; }
+.lifeAbout { color: var(--smoke); font-size: 13px; line-height: 1.5; }
+.lifeCount { color: var(--graphite); font-size: 13px; }
+.lifeCount b { color: var(--navy); }
+.lifeLatest { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; border-top: 1px solid var(--stone); padding-top: 8px; color: var(--graphite); font-size: 13px; line-height: 1.5; }
+@media (max-width: 640px) {
+  .lifeDoors { grid-template-columns: 1fr; gap: 8px; }
+  .lifeAbout { display: none; }
+  .lifeIcon { grid-row: 1 / span 3; }
+  .lifeLatest { -webkit-line-clamp: 1; padding-top: 6px; }
+}
+.wordsFacts { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.wordsFacts li { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; border: 1px solid var(--stone); border-radius: 16px; background: white; padding: 12px; }
+.wordsFacts li > div { display: grid; align-content: start; gap: 4px; }
+.wordsFacts small { color: var(--smoke); font-size: 12px; }
+.wordsFacts a { color: var(--ink); font-size: 14px; font-weight: 700; line-height: 1.5; text-decoration: none; }
+.wordsFacts a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.fact { border-left: 3px solid var(--navy); padding-left: 10px; }
+.fact small { color: var(--navy) !important; font-weight: 750; }
+.fact p { margin: 0; font-size: 14px; line-height: 1.55; }
+@media (max-width: 480px) { .wordsFacts li { grid-template-columns: 1fr; } .fact { border-left: 0; border-top: 3px solid var(--navy); padding: 8px 0 0; } }
