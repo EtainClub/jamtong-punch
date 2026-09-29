@@ -23,8 +23,8 @@ const str = (value: unknown) => (typeof value === "string" ? value : "");
 function list<T>(value: unknown): T[] { return Array.isArray(value) ? value as T[] : []; }
 
 const precisions: Choices = [["day", "일"], ["month", "월"], ["year", "연"]];
-// "반려" is set only through the reject button, which records a note; it is
-// listed so a rejected item still shows its state.
+// Choosing "반려" makes the editor ask for a note and send the item back
+// through the reject endpoint instead of a regular save.
 const statuses: Choices = [["draft", "초안"], ["review", "검토 대기"], ["rejected", "반려"], ["published", "공개"], ["archived", "보관"]];
 const statusSuffix: Record<string, string> = { draft: " (초안)", review: " (검토 대기)", rejected: " (반려)", archived: " (보관)" };
 const statementKinds: Choices = [["remark", "발언"], ["interview", "인터뷰"], ["speech", "연설"], ["sns", "SNS"], ["hearing", "국회·청문"], ["action", "행동"], ["decision", "결정"], ["policy", "정책"]];

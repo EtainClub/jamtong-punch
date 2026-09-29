@@ -17,6 +17,8 @@ const STATUS_LABELS: Record<string, string> = { draft: "초안", review: "검토
 // Statuses a contributor can still edit (and so sees in their own list).
 const OWN_OPEN = new Set(["draft", "review", "rejected"]);
 type Rejection = { note: string; at: string };
+// Mirrors REJECTION_NOTE_MAX in lib/content/store.ts.
+const REJECTION_NOTE_MAX = 500;
 
 type Profile = { isOps: boolean; isContributor: boolean; nickname: string | null };
 export type EditorMode = "ops" | "contributor";
@@ -81,6 +83,7 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
   const deepLinkHandled = useRef(false);
 
   // Linking to Google keeps the same User object, so the flag is tracked on its own.
@@ -127,7 +130,7 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
   const update = useCallback((patch: Record<string, unknown>) => setDraft((current) => ({ ...current, ...patch })), []);
   const addSource = useCallback((source: Draft) => setRefs((current) => (current.sources.some((item) => item.id === source.id) ? current : { ...current, sources: [...current.sources, source] })), []);
   function open(nextType: ContentType, item: Draft | null) {
-    setType(nextType); setSelectedId(item?.id ?? ""); setDraft(item ?? emptyDraft(nextType)); setFormKey((key) => key + 1); setNotice(null);
+    setType(nextType); setSelectedId(item?.id ?? ""); setDraft(item ?? emptyDraft(nextType)); setFormKey((key) => key + 1); setNotice(null); setRejectNote("");
   }
 
   const uploadImage = useCallback(async (file: File) => {
@@ -154,8 +157,14 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
     return () => window.removeEventListener("paste", handlePaste);
   }, [type, uploadImage, asOps]);
 
+  // An operator picking "반려" (from the status select or the button) sends
+  // the item back with a note instead of saving it.
+  const savedStatus = refs[type].find((item) => item.id === selectedId)?.status;
+  const rejecting = asOps && draft.status === "rejected" && savedStatus !== "rejected";
+
   async function save() {
     if (!user) return;
+    if (rejecting) { await reject(); return; }
     if (!asOps && draft.status === "rejected") { setNotice({ ok: false, text: "반려 사유대로 고친 뒤 상태를 '검토 요청'으로 바꿔 저장하세요." }); return; }
     setLoading(true);
     // The rejection note is shown alongside, not part of the record.
@@ -169,13 +178,15 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
     finally { setLoading(false); }
   }
   async function reject() {
-    if (!user || !selectedId) return;
-    const note = prompt("반려 사유를 적어 주세요. 등록한 사람에게 그대로 보입니다.");
-    if (note === null) return;
+    if (!user) return;
+    if (!selectedId) { setNotice({ ok: false, text: "새 항목은 반려할 수 없습니다. 다른 상태를 고르세요." }); return; }
+    const note = rejectNote.trim();
+    if (!note || note.length > REJECTION_NOTE_MAX) { setNotice({ ok: false, text: `반려 사유를 1~${REJECTION_NOTE_MAX}자로 적어 주세요.` }); return; }
     setLoading(true);
     try {
       await accountJsonFetch<void>(user, `/api/ops/content/${type}/${selectedId}`, { method: "PATCH", body: JSON.stringify({ rejectNote: note }) });
-      setDraft((current) => ({ ...current, status: "rejected", rejection: { note: note.trim(), at: new Date().toISOString() } }));
+      setDraft((current) => ({ ...current, status: "rejected", rejection: { note, at: new Date().toISOString() } }));
+      setRejectNote("");
       setNotice({ ok: true, text: "반려했습니다. 등록한 사람이 사유를 보고 고쳐 다시 요청할 수 있습니다." });
       await load();
     } catch (cause) { setNotice({ ok: false, text: failure("반려하지 못했습니다", cause) }); }
@@ -234,14 +245,17 @@ export function OpsContentManager({ mode = "ops" }: { mode?: EditorMode }) {
         <section className={styles.editor}>
           <div className={styles.editorHead}><div><strong>{selectedId ? `${typeName} 수정` : `새 ${typeName}`}</strong><p>{type === "people" ? "인물 ID는 공개 주소가 됩니다." : "문서 ID는 자동 생성됩니다."}</p></div><button className={styles.secondary} onClick={() => open(type, null)} type="button">새로 만들기</button></div>
           {!editable && <p className={styles.help}>공개된 기록은 운영자만 고칠 수 있습니다. 고칠 점이 있으면 운영자에게 알려 주세요.</p>}
-          {rejection && <div className={styles.rejection}><strong>{draft.status === "rejected" ? "반려됨" : "이전 반려 사유"}</strong><p>{rejection.note}</p><small>{new Date(rejection.at).toLocaleString("ko-KR")}</small></div>}
+          {rejection && <div className={styles.rejection}><strong>{draft.status === "rejected" && !rejecting ? "반려됨" : "이전 반려 사유"}</strong><p>{rejection.note}</p><small>{new Date(rejection.at).toLocaleString("ko-KR")}</small></div>}
           <div className={styles.form}>
             {type !== "people" && <Field label="문서 ID" hint="자동 생성됨"><output>{draft.id}</output></Field>}
             <ContentForm key={formKey} type={type} draft={draft} update={update} refs={refs} isNew={!selectedId} image={{ uploading, onFile: (file) => void uploadImage(file) }} addSource={addSource} />
           </div>
           {duplicates.length > 0 && <ul className={styles.duplicates}>{duplicates.map((message) => <li key={message}>{message}</li>)}</ul>}
+          {rejecting && <div className={styles.rejectBox}>{selectedId
+            ? <Field label="반려 사유" required hint={`등록한 사람에게 그대로 보입니다. 반려하면 상태만 바뀌고, 이 화면에서 고친 다른 내용은 저장되지 않습니다. (${rejectNote.trim().length}/${REJECTION_NOTE_MAX}자)`}><textarea value={rejectNote} onChange={(event) => setRejectNote(event.target.value)} maxLength={REJECTION_NOTE_MAX} placeholder="무엇을 고쳐야 하는지 구체적으로 적어 주세요." autoFocus /></Field>
+            : <p className={styles.error}>새 항목은 반려할 수 없습니다. 다른 상태를 고르세요.</p>}</div>}
           {notice && <p className={notice.ok ? styles.success : styles.error}>{notice.text}</p>}
-          <footer><span className={styles.footerLeft}><button className={styles.delete} onClick={() => void remove()} disabled={!selectedId || loading || uploading || !editable} type="button">삭제</button>{asOps && selectedId && draft.status === "review" && <button className={styles.secondary} onClick={() => void reject()} disabled={loading || uploading} type="button">반려</button>}</span><button className={styles.save} onClick={() => void save()} disabled={loading || uploading || !editable} type="button">{loading ? "처리 중…" : "검증 후 저장"}</button></footer>
+          <footer><span className={styles.footerLeft}><button className={styles.delete} onClick={() => void remove()} disabled={!selectedId || loading || uploading || !editable} type="button">삭제</button>{asOps && selectedId && savedStatus === "review" && !rejecting && <button className={styles.secondary} onClick={() => update({ status: "rejected" })} disabled={loading || uploading} type="button">반려</button>}</span><button className={styles.save} onClick={() => void save()} disabled={loading || uploading || !editable} type="button">{loading ? "처리 중…" : rejecting ? "반려하기" : "검증 후 저장"}</button></footer>
         </section>
       </section>
     </main>
