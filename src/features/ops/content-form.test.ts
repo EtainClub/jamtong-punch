@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { findDuplicates, formatTimecode, normalizeUrl, parseTimecode, youtubeVideoId } from "./content-form";
+import { findDuplicates, formatTimecode, normalizeUrl, parseTimecode, videoCitation, youtubeVideoId } from "./content-form";
+import { citationSchema } from "@/content/schema";
 
 describe("timecodes", () => {
   test("reads the forms operators paste", () => {
@@ -22,6 +23,11 @@ describe("timecodes", () => {
     expect(formatTimecode(3723)).toBe("1:02:03");
     expect(parseTimecode(formatTimecode(3723))).toBe(3723);
   });
+});
+
+test("a YouTube source with unknown duration starts with no citation segment", () => {
+  expect(citationSchema.parse(videoCitation("source", null))).toMatchObject({ startSec: null, endSec: null });
+  expect(citationSchema.parse(videoCitation("source", 83))).toMatchObject({ startSec: 0, endSec: 83 });
 });
 
 describe("youtubeVideoId", () => {

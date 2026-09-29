@@ -34,6 +34,10 @@ export function slugify(value: string) {
 
 export const emptyCitation = (): Citation => ({ sourceId: "", startSec: null, endSec: null, locator: null, transcript: null, transcriptOrigin: null, transcriptVerified: false });
 
+export function videoCitation(sourceId: string, durationSec: number | null): Citation {
+  return { ...emptyCitation(), sourceId, startSec: durationSec === null ? null : 0, endSec: durationSec };
+}
+
 export function emptyDraft(type: ContentType): Draft {
   const base = { status: "draft", corrections: [] };
   switch (type) {

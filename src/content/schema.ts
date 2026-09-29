@@ -34,7 +34,7 @@ export const citationSchema = z.object({
   transcriptOrigin: z.enum(["manual", "auto-caption", "asr"]).nullable().default(null),
   transcriptVerified: z.boolean().default(false),
 }).strict().refine((value) => (value.startSec === null) === (value.endSec === null), "citation segment needs both start and end")
-  .refine((value) => value.startSec === null || value.endSec! > value.startSec, "citation segment end must be after start")
+  .refine((value) => value.startSec === null || value.endSec === null || value.endSec > value.startSec, "citation segment end must be after start")
   .refine((value) => (value.transcript === null) === (value.transcriptOrigin === null), "a transcript needs its origin");
 
 export const sourceSchema = z.object({

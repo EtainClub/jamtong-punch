@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useRef, useState, type ReactNode } from "react";
-import { emptyCitation, formatTimecode, orNull, parseTimecode, slugify, youtubeVideoId, type Citation, type ContentType, type Draft } from "./content-form";
+import { emptyCitation, formatTimecode, orNull, parseTimecode, slugify, videoCitation, youtubeVideoId, type Citation, type ContentType, type Draft } from "./content-form";
 import { detectMentions } from "@/lib/content/derive";
 import { accountJsonFetch } from "@/lib/firebase/api";
 import { useFirebaseAuth } from "@/lib/firebase/auth";
@@ -79,7 +79,7 @@ function CitationEditor({ value, sources, onChange, onRemove, segmentRequired = 
   return <div className={styles.row}>
     <Field label="출처" required><Select value={value.sourceId} onChange={(sourceId) => set({ sourceId, startSec: null, endSec: null })} choices={sources.map((item) => [item.id, `${str(item.title)} · ${str(item.publisher)}`] as const)} placeholder="출처를 고르세요" /></Field>
     {isVideo ? <>
-      <Field label="구간 시작" required={segmentRequired} optional={!segmentRequired}><TimecodeInput value={value.startSec} onChange={(startSec) => set({ startSec })} /></Field>
+      <Field label="구간 시작" required={segmentRequired} optional={!segmentRequired} hint={!segmentRequired ? "구간을 적을 때는 시작과 끝을 함께 입력하세요" : undefined}><TimecodeInput value={value.startSec} onChange={(startSec) => set({ startSec })} /></Field>
       <Field label="구간 끝" required={segmentRequired} optional={!segmentRequired}><TimecodeInput value={value.endSec} onChange={(endSec) => set({ endSec })} /></Field>
     </> : <Field label="위치" optional hint="문단, 쪽수 등"><input value={value.locator ?? ""} onChange={(event) => set({ locator: orNull(event.target.value) })} /></Field>}
     {videoId && value.startSec !== null && <a className={styles.help} href={`https://www.youtube.com/watch?v=${videoId}&t=${value.startSec}`} target="_blank" rel="noreferrer">구간 열어 확인 ↗</a>}
@@ -250,7 +250,7 @@ function YoutubeQuickStart({ onReady }: { onReady: (source: Draft, meta: Youtube
 // segment (narrow it to the remark), the publish date as an estimate, and a
 // first line of context naming where it came from.
 function fromVideo(source: Draft, meta: YoutubeMeta, draft: Draft) {
-  const citation: Citation = { ...emptyCitation(), sourceId: source.id, startSec: 0, endSec: meta.durationSec };
+  const citation = videoCitation(source.id, meta.durationSec);
   const context = str(draft.context) || `${str(source.publisher)} 영상(${str(source.publishedAt)} 게시)에서 가져왔다. 발언일은 게시일로 추정했다.`;
   return {
     citation,
