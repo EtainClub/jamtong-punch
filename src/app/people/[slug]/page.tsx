@@ -80,7 +80,7 @@ async function Profile({ person }: { person: PersonView }) {
     <p className={styles.counts}><span>기록 <b>{person.counts.statements}</b></span><span>평가 <b>{person.counts.evaluationsReceived}</b></span><span>관계 <b>{person.counts.relations}</b></span></p>
     {person.playable && <div className={styles.participation}>
       {hidden ? <p>{RATIOS_HIDDEN_NOTE}</p> : d30 && d30.ratio !== null
-        ? <p>30일 · 참여 {d30.n.toLocaleString("ko-KR")}명 · <span className={styles.punch}>펀치 {d30.ratio}%</span></p>
+        ? <p>30일 · 참여 {d30.n.toLocaleString("ko-KR")}명 · <span className={styles.cheer}>응원 {100 - d30.ratio}%</span></p>
         : <p>30일 · 참여 {(d30?.n ?? 0).toLocaleString("ko-KR")}명 · 참여 {MIN_PARTICIPANTS}명부터 표시합니다</p>}
       <small>임통 참여자의 기록입니다. 일반 국민 여론이나 여론조사와 다릅니다.</small>
       <div className={styles.playLinks}>

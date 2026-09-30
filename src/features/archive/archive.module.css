@@ -52,7 +52,7 @@
 .participation { width: 100%; margin-top: 12px; border-radius: 14px; background: var(--taupe); padding: 12px 14px; text-align: left; }
 .participation p { margin: 0; font-size: 15px; font-variant-numeric: tabular-nums; }
 .participation small { display: block; margin-top: 4px; color: var(--smoke); font-size: 13px; }
-.punch { color: var(--burgundy); font-weight: 750; }
+.cheer { color: var(--navy); font-weight: 750; }
 
 .tabs { display: flex; position: sticky; top: 53px; z-index: 5; border-bottom: 1px solid var(--stone); background: var(--eggshell); }
 .tabs a { flex: 1; min-height: 46px; padding: 13px 0 11px; border-bottom: 2px solid transparent; color: var(--smoke); font-size: 15px; font-weight: 700; text-align: center; text-decoration: none; }
