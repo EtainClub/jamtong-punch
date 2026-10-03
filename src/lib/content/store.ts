@@ -669,15 +669,15 @@ export async function requirePublishedStatement(id: string) {
   return statement;
 }
 
-// Participation targets: a person must also be playable; a statement only
-// needs to be public.
-export async function requirePublishedTargets(entries: { kind: Kind; slug: string }[]) {
+// Games require playable people. Static buttons accept any published person;
+// statements only need to be public in either participation mode.
+export async function requirePublishedTargets(entries: { kind: Kind; slug: string }[], { requirePlayable = true } = {}) {
   const people = await getMany("people", entries.filter((entry) => entry.kind === "person").map((entry) => entry.slug));
   const statements = await getMany("statements", entries.filter((entry) => entry.kind === "statement").map((entry) => entry.slug));
   return entries.map((entry) => {
     const target = entry.kind === "person" ? people.get(entry.slug) : statements.get(entry.slug);
     if (!target || target.status !== "published") throw new Error(`unknown or unpublished ${entry.kind}: ${entry.slug}`);
-    if (entry.kind === "person" && !(target as Person).playable) throw new Error(`person is not playable: ${entry.slug}`);
+    if (requirePlayable && entry.kind === "person" && !(target as Person).playable) throw new Error(`person is not playable: ${entry.slug}`);
     return { id: target.id, kind: entry.kind };
   });
 }

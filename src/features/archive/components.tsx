@@ -225,6 +225,10 @@ export function EvaluationCard({ evaluation, sources, names, topics, responses =
       <ShareButton path={`/evaluations/${evaluation.id}`} title={evaluation.claim} />
       <ReportButton targetType="evaluation" targetId={evaluation.id} />
     </div>
+    {evaluation.evaluator.personId && names[evaluation.evaluator.personId] && <div className={styles.reaction}>
+      <p className={styles.figure}>{evaluation.evaluator.name}에 대한 입장</p>
+      <StanceButtons kind="person" id={evaluation.evaluator.personId} options={["punch", "cheer"]} note={`오늘 ${evaluation.evaluator.name}에 대한 입장 1건입니다. 인물 페이지나 게임에서 다시 참여하면 바뀔 뿐 늘지 않습니다.`} />
+    </div>}
   </article>;
 }
 

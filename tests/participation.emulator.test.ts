@@ -35,7 +35,7 @@ const stance = (kind: "person" | "statement", slug: string, value: "punch" | "ch
   afterAll(async () => {
     const batch = db.batch();
     for (const [type, id] of created) batch.delete(db.doc(`${type}/${id}`));
-    for (const id of ["pt-playable", "pt-statement"]) {
+    for (const id of ["pt-playable", "pt-archive-only", "pt-statement"]) {
       batch.delete(db.doc(`users/${uid}/stances/${id}_${today}`));
       batch.delete(db.doc(`subjectStats/${id}`));
       batch.delete(db.doc(`subjectCohorts/${id}_${today}`));
@@ -53,9 +53,25 @@ const stance = (kind: "person" | "statement", slug: string, value: "punch" | "ch
     expect(ledger.data()).toMatchObject({ kind: "statement", stance: "cheer", game: "static" });
   });
 
-  test("only playable people can be targeted", async () => {
-    await expect(stance("person", "pt-archive-only", "punch")).rejects.toThrow("is not playable");
+  test("static buttons accept people without photos and replace their stance", async () => {
+    expect((await stance("person", "pt-archive-only", "punch")).accepted).toEqual(["pt-archive-only"]);
+    expect((await stance("person", "pt-archive-only", "cheer")).replaced).toEqual(["pt-archive-only"]);
+    const ledger = await db.doc(`users/${uid}/stances/pt-archive-only_${today}`).get();
+    expect(ledger.data()).toMatchObject({ kind: "person", stance: "cheer", game: "static" });
     expect((await stance("person", "pt-playable", "punch")).accepted).toEqual(["pt-playable"]);
+  });
+
+  test.each(["reflex", "swipe"] as const)("%s still rejects people without photos", async (game) => {
+    await expect(submitParticipation(uid, {
+      sessionId: randomUUID(), game, startedAt: new Date(Date.now() - 5_000).toISOString(),
+      stances: [{ kind: "person", slug: "pt-archive-only", stance: "punch", recordId: null, score: null }],
+    })).rejects.toThrow("is not playable");
+  });
+
+  test("static buttons still reject unknown and unpublished people", async () => {
+    await save("people", { id: "pt-draft", name: "가상병", summary: "작가", status: "draft" });
+    await expect(stance("person", "pt-draft", "cheer")).rejects.toThrow("unknown or unpublished");
+    await expect(stance("person", "pt-missing", "cheer")).rejects.toThrow("unknown or unpublished");
   });
 
   test("statements get whole-period stats but stay out of the people index", async () => {
@@ -64,6 +80,7 @@ const stance = (kind: "person" | "statement", slug: string, value: "punch" | "ch
     expect(statement.get("windows").all).toMatchObject({ punch: 0, cheer: 1 });
     expect(index.get("s")?.["pt-statement"]).toBeUndefined();
     expect(index.get("s")?.["pt-playable"]?.d30?.punch).toBe(1);
+    expect(index.get("s")?.["pt-archive-only"]?.d30?.cheer).toBe(1);
     expect((await db.doc(`subjectCohorts/pt-statement_${today}`).get()).get("kind")).toBe("statement");
   });
 });
