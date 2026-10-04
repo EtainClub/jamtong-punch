@@ -11,6 +11,7 @@ import { ReportButton } from "./ReportButton";
 import { ShareButton } from "./ShareButton";
 import { StanceButtons } from "./StanceButtons";
 import { VideoEmbed } from "./VideoEmbed";
+import { CheerGauge } from "./CheerGauge";
 import styles from "./archive.module.css";
 
 export type Names = Record<string, string>;
@@ -183,8 +184,16 @@ export const RATIOS_HIDDEN_NOTE = "지금은 참여 수치를 공개하지 않�
 function Reaction({ id, counts }: { id: string; counts?: StanceCounts }) {
   const figure = present(counts ?? { punch: 0, cheer: 0, unknown: 0 });
   return <div className={styles.reaction}>
+    <div className={styles.reactionSummary}>
+      <div>
+        <p className={styles.reactionTitle}>이 언행에 대한 응원율</p>
+        <p className={styles.figure}>{counts?.hidden ? RATIOS_HIDDEN_NOTE : <>전체 기간 · 참여 <b>{figure.n.toLocaleString("ko-KR")}명</b></>}</p>
+        {!counts?.hidden && figure.ratio === null && <p className={styles.figure}>참여 {MIN_PARTICIPANTS}명부터 비율을 표시합니다</p>}
+      </div>
+      <CheerGauge rate={figure.ratio === null ? null : 100 - figure.ratio} hidden={counts?.hidden} period="전체 기간" />
+    </div>
     <StanceButtons kind="statement" id={id} options={["punch", "cheer", "unknown"]} note="언행에 대한 입장은 한 사람에 1건, 가장 최근 입장만 셉니다." />
-    <p className={styles.figure}>{counts?.hidden ? RATIOS_HIDDEN_NOTE : <>참여 {figure.n.toLocaleString("ko-KR")}명 · {figure.ratio === null ? `${MIN_PARTICIPANTS}명부터 비율을 표시합니다` : <b>펀치 {figure.ratio}%</b>} · 임통 참여자의 기록이며 여론조사가 아닙니다</>}</p>
+    <p className={styles.figure}>임통 참여자의 기록이며 여론조사가 아닙니다.</p>
   </div>;
 }
 

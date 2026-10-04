@@ -14,6 +14,7 @@ import { StanceButtons } from "@/features/archive/StanceButtons";
 import { OpsEditLink } from "@/features/archive/OpsEditLink";
 import { PersonActivity } from "@/features/archive/PersonActivity";
 import { RelationPreview } from "@/features/archive/RelationPreview";
+import { CheerGauge } from "@/features/archive/CheerGauge";
 
 export const dynamic = "force-dynamic";
 
@@ -79,15 +80,28 @@ async function Profile({ person }: { person: PersonView }) {
     <ReportButton targetType="person" targetId={person.id} hasPhoto={Boolean(person.image)} />
     <p className={styles.counts}><span>기록 <b>{person.counts.statements}</b></span><span>평가 <b>{person.counts.evaluationsReceived}</b></span><span>관계 <b>{person.counts.relations}</b></span></p>
     <div className={styles.participation}>
-      {hidden ? <p>{RATIOS_HIDDEN_NOTE}</p> : d30 && d30.ratio !== null
-        ? <p>30일 · 참여 {d30.n.toLocaleString("ko-KR")}명 · <span className={styles.cheer}>응원 {100 - d30.ratio}%</span></p>
-        : <p>30일 · 참여 {(d30?.n ?? 0).toLocaleString("ko-KR")}명 · 참여 {MIN_PARTICIPANTS}명부터 표시합니다</p>}
-      <small>임통 참여자의 기록입니다. 일반 국민 여론이나 여론조사와 다릅니다.</small>
-      {person.playable && <div className={styles.playLinks}>
-        <Link className={styles.playPunch} href={`/people/${person.id}/play/punch`}>👊 펀치 게임</Link>
-        <Link className={styles.playCheer} href={`/people/${person.id}/play/cheer`}>👏 응원 게임</Link>
-      </div>}
-      <StanceButtons kind="person" id={person.id} options={["punch", "cheer"]} note="게임 한 판이나 버튼 한 번이 오늘 이 인물에 대한 입장 1건입니다. 오늘 다시 하면 바뀔 뿐 늘지 않습니다." />
+      <div className={styles.participationSummary}>
+        <div className={styles.participationInfo}>
+          <h2>참여자의 응원율</h2>
+          {hidden ? <p>{RATIOS_HIDDEN_NOTE}</p> : <>
+            <p>최근 30일 <span aria-hidden="true">·</span> 참여 <b>{(d30?.n ?? 0).toLocaleString("ko-KR")}명</b></p>
+            {d30?.ratio === null || !d30 ? <small>참여 {MIN_PARTICIPANTS}명부터 비율을 표시합니다</small> : null}
+          </>}
+        </div>
+        <CheerGauge rate={d30?.ratio === null || d30?.ratio === undefined ? null : 100 - d30.ratio} hidden={hidden} />
+      </div>
+      <div className={styles.participationActions} data-playable={person.playable}>
+        {person.playable && <>
+          <span className={styles.gameLabel}>게임으로 참여</span>
+          <div className={styles.playLinks}>
+            <Link className={styles.playPunch} href={`/people/${person.id}/play/punch`}>👊 펀치 게임</Link>
+            <Link className={styles.playCheer} href={`/people/${person.id}/play/cheer`}>👏 응원 게임</Link>
+          </div>
+        </>}
+        <span className={styles.quickLabel}>바로 참여</span>
+        <StanceButtons kind="person" id={person.id} options={["punch", "cheer"]} note="오늘의 입장은 1건만 반영됩니다. 다시 참여하면 이전 입장을 바꿉니다." />
+      </div>
+      <small className={styles.participationDisclaimer}>임통 참여자의 기록이며, 일반 국민 여론이나 여론조사가 아닙니다.</small>
     </div>
   </section>;
 }
