@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ShareButton } from "@/features/archive/ShareButton";
 import { PROSECUTION_REFORM_TOPIC, issueChecks, reformStrategies, researchSources, timelineCategories, timelineEntries, timelinePeriods, type ResearchSourceId } from "@/content/prosecution-reform-timeline";
 import { SiteHeader } from "@/features/archive/components";
 import archive from "@/features/archive/archive.module.css";
@@ -30,7 +31,7 @@ export default async function ProsecutionReformTimelinePage({ searchParams }: Pr
       <section className={archive.hero}>
         <Link className={styles.back} href="/topics">← 쟁점 목록</Link>
         <p className={archive.eyebrow}>2017~2026 · 저서·공약·발언·정부 실행</p>
-        <h1>{PROSECUTION_REFORM_TOPIC.title}</h1>
+        <div className={archive.detailTitle}><h1>{PROSECUTION_REFORM_TOPIC.title}</h1><ShareButton path={`/topics/${PROSECUTION_REFORM_TOPIC.id}`} title={PROSECUTION_REFORM_TOPIC.title} prominent /></div>
         <p>{PROSECUTION_REFORM_TOPIC.description}</p>
         <p className={styles.meta}>조사 기준 {PROSECUTION_REFORM_TOPIC.reviewedAt} · 연표 {timelineEntries.length}개 항목 · 주요 쟁점 {issueChecks.length}개 · 자료 {sourceIds.length}개</p>
         <nav className={styles.periodNav} aria-label="내용 바로가기"><a href="#reform-strategy">개혁 의지와 전략</a><a href="#book-2017">2017년 저서</a><a href="#current-status">현재 단계</a><a href="#issue-checks">주요 쟁점</a><a href="#timeline-title">타임라인</a><Link href="/topics/prosecution-reform">검찰개혁 인물별 언행</Link><Link href="/topics/kim-ji-yong">김지용 인선 논쟁</Link></nav>

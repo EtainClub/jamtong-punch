@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ShareButton } from "@/features/archive/ShareButton";
 import { KIM_BU_SEON_TOPIC, referenceVideo, relatedVoices, researchSources, timelineEntries, timelinePeriods, type ResearchSourceId, type TimelineCategory } from "@/content/kim-bu-seon-timeline";
 import { SiteHeader } from "@/features/archive/components";
 import archive from "@/features/archive/archive.module.css";
@@ -32,7 +33,7 @@ export default async function KimBuSeonTimelinePage({ searchParams }: Props) {
       <section className={archive.hero}>
         <Link className={styles.back} href="/topics">← 쟁점 목록</Link>
         <p className={archive.eyebrow}>쟁점 조사 · 의혹 / 반박 / 검증</p>
-        <h1>{KIM_BU_SEON_TOPIC.title}</h1>
+        <div className={archive.detailTitle}><h1>{KIM_BU_SEON_TOPIC.title}</h1><ShareButton path={`/topics/${KIM_BU_SEON_TOPIC.id}`} title={KIM_BU_SEON_TOPIC.title} prominent /></div>
         <p>{KIM_BU_SEON_TOPIC.description}</p>
         <p className={styles.meta}>조사 기준 {KIM_BU_SEON_TOPIC.reviewedAt} · 연표 {timelineEntries.length}개 항목 · 관련 인물 {relatedVoices.length}명 · 자료 {sourceIds.length}개</p>
       </section>

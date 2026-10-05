@@ -15,6 +15,7 @@ import { OpsEditLink } from "@/features/archive/OpsEditLink";
 import { PersonActivity } from "@/features/archive/PersonActivity";
 import { RelationPreview } from "@/features/archive/RelationPreview";
 import { CheerGauge } from "@/features/archive/CheerGauge";
+import { ShareButton } from "@/features/archive/ShareButton";
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +75,7 @@ async function Profile({ person }: { person: PersonView }) {
   return <section className={styles.profile} aria-labelledby="person-name">
     <Avatar person={person} size={112} />
     {person.image?.rightsStatus === "cleared" && person.image.credit && <a className={styles.photoCredit} href={person.image.sourceUrl} target="_blank" rel="noreferrer">사진: {person.image.credit}</a>}
-    <h1 id="person-name">{person.name}</h1>
+    <div className={styles.detailTitle}><h1 id="person-name">{person.name}</h1><ShareButton path={`/people/${person.id}`} title={`${person.name} 발언·평가 모음`} prominent /></div>
     <p className={styles.roles}>{currentRole(person)}</p>
     <OpsEditLink type="people" id={person.id} label="인물 정보" />
     <ReportButton targetType="person" targetId={person.id} hasPhoto={Boolean(person.image)} />

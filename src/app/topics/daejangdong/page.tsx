@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ShareButton } from "@/features/archive/ShareButton";
 import { DAEJANGDONG_TOPIC, caseTracks, relatedVoices, researchSources, timelineCategories, timelineEntries, timelinePeriods, type ResearchSourceId } from "@/content/daejangdong-timeline";
 import { SiteHeader } from "@/features/archive/components";
 import archive from "@/features/archive/archive.module.css";
@@ -31,7 +32,7 @@ export default async function DaejangdongTimelinePage({ searchParams }: Props) {
       <section className={archive.hero}>
         <Link className={styles.back} href="/topics">← 쟁점 목록</Link>
         <p className={archive.eyebrow}>쟁점 조사 · 사업 / 수사 / 재판 / 발언</p>
-        <h1>{DAEJANGDONG_TOPIC.title}</h1>
+        <div className={archive.detailTitle}><h1>{DAEJANGDONG_TOPIC.title}</h1><ShareButton path={`/topics/${DAEJANGDONG_TOPIC.id}`} title={DAEJANGDONG_TOPIC.title} prominent /></div>
         <p>{DAEJANGDONG_TOPIC.description}</p>
         <p className={styles.meta}>조사 기준 {DAEJANGDONG_TOPIC.reviewedAt} · 연표 {timelineEntries.length}개 항목 · 관련 인물 {relatedVoices.length}명 · 자료 {sourceIds.length}개</p>
       </section>

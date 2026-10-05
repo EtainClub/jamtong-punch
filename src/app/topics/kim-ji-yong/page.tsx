@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ShareButton } from "@/features/archive/ShareButton";
 import { KIM_JI_YONG_TOPIC, issueChecks, relatedVoices, researchSources, timelineCategories, timelineEntries, timelinePeriods, type ResearchSourceId } from "@/content/kim-ji-yong-timeline";
 import { SiteHeader } from "@/features/archive/components";
 import archive from "@/features/archive/archive.module.css";
@@ -30,7 +31,7 @@ export default async function KimJiYongTimelinePage({ searchParams }: Props) {
       <section className={archive.hero}>
         <Link className={styles.back} href="/topics">← 쟁점 목록</Link>
         <p className={archive.eyebrow}>쟁점 조사 · 검찰개혁 / 인선 / 반대 / 검증</p>
-        <h1>{KIM_JI_YONG_TOPIC.title}</h1>
+        <div className={archive.detailTitle}><h1>{KIM_JI_YONG_TOPIC.title}</h1><ShareButton path={`/topics/${KIM_JI_YONG_TOPIC.id}`} title={KIM_JI_YONG_TOPIC.title} prominent /></div>
         <p>{KIM_JI_YONG_TOPIC.description}</p>
         <p className={styles.meta}>조사 기준 {KIM_JI_YONG_TOPIC.reviewedAt} · 연표 {timelineEntries.length}개 항목 · 관련 인물·단체 {relatedVoices.length}개 · 자료 {sourceIds.length}개</p>
         <nav className={styles.periodNav} aria-label="내용 바로가기"><a href="#president-position">대통령 X 글</a><a href="#related-voices">반대 인사와 과거 행적</a><a href="#issue-checks">쟁점별 검증</a><a href="#timeline-title">타임라인</a></nav>

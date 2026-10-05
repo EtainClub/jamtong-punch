@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ComparePicker } from "@/features/archive/ComparePicker";
+import { ShareButton } from "@/features/archive/ShareButton";
 import { Avatar, Empty, EvaluationCard, MoreLink, nameMap, SiteHeader, StatementCard } from "@/features/archive/components";
 import styles from "@/features/archive/archive.module.css";
 import { lifeDoor } from "@/features/archive/life";
@@ -83,7 +84,7 @@ export default async function TopicPage({ params, searchParams }: Props) {
     <main className={styles.shell}>
       <section className={styles.hero}>
         <p className={styles.eyebrow}>{lifeDoor(topic.id) ? `${lifeDoor(topic.id)!.icon} 생활 쟁점` : "쟁점"}{parent && <> · <Link href={`/topics/${parent.id}`}>#{parent.name}</Link></>}</p>
-        <h1>#{topic.name}</h1>
+        <div className={styles.detailTitle}><h1>#{topic.name}</h1><ShareButton path={`/topics/${topic.id}`} title={`#${topic.name}: 누가 뭐라고 했나`} prominent /></div>
         <p>{topic.description}</p>
         {children.length > 0 && <ul className={styles.chips}>{children.map((child) => <li key={child.id}><Link className={styles.chip} href={`/topics/${child.id}`}>#{child.name}</Link></li>)}</ul>}
       </section>

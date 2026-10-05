@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ShareButton } from "@/features/archive/ShareButton";
 import { FAMILY_PROFANITY_TOPIC, relatedVoices, researchSources, timelineCategories, timelineEntries, timelinePeriods, type ResearchSourceId } from "@/content/family-profanity-timeline";
 import { SiteHeader } from "@/features/archive/components";
 import archive from "@/features/archive/archive.module.css";
@@ -30,7 +31,7 @@ export default async function FamilyProfanityTimelinePage({ searchParams }: Prop
       <section className={archive.hero}>
         <Link className={styles.back} href="/topics">← 쟁점 목록</Link>
         <p className={archive.eyebrow}>쟁점 조사 · 갈등 / 녹취 / 해명 / 판결</p>
-        <h1>{FAMILY_PROFANITY_TOPIC.title}</h1>
+        <div className={archive.detailTitle}><h1>{FAMILY_PROFANITY_TOPIC.title}</h1><ShareButton path={`/topics/${FAMILY_PROFANITY_TOPIC.id}`} title={FAMILY_PROFANITY_TOPIC.title} prominent /></div>
         <p>{FAMILY_PROFANITY_TOPIC.description}</p>
         <p className={styles.meta}>조사 기준 {FAMILY_PROFANITY_TOPIC.reviewedAt} · 연표 {timelineEntries.length}개 항목 · 관련 인물 {relatedVoices.length}명 · 자료 {sourceIds.length}개</p>
       </section>
