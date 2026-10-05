@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { KIM_BU_SEON_TOPIC, timelineEntries } from "@/content/kim-bu-seon-timeline";
 import { DAEJANGDONG_TOPIC, timelineEntries as daejangdongEntries } from "@/content/daejangdong-timeline";
+import { FAMILY_PROFANITY_TOPIC, timelineEntries as familyProfanityEntries } from "@/content/family-profanity-timeline";
+import { KIM_JI_YONG_TOPIC, timelineEntries as kimJiYongEntries } from "@/content/kim-ji-yong-timeline";
 import { Empty, SiteHeader } from "@/features/archive/components";
 import styles from "@/features/archive/archive.module.css";
 import { listTopics } from "@/lib/archive/read";
@@ -25,6 +27,12 @@ export default async function TopicsPage() {
         </li><li>
           <Link href={`/topics/${DAEJANGDONG_TOPIC.id}`}><strong>{DAEJANGDONG_TOPIC.title}</strong><span>{daejangdongEntries.length}개 항목 · 개발사업부터 수사·재판과 정치적 대응까지</span></Link>
           <p className={styles.note}>{DAEJANGDONG_TOPIC.description}</p>
+        </li><li>
+          <Link href={`/topics/${FAMILY_PROFANITY_TOPIC.id}`}><strong>{FAMILY_PROFANITY_TOPIC.title}</strong><span>{familyProfanityEntries.length}개 항목 · 가족 갈등과 녹취 공개부터 해명·사과와 관련 재판까지</span></Link>
+          <p className={styles.note}>{FAMILY_PROFANITY_TOPIC.description}</p>
+        </li><li>
+          <Link href={`/topics/${KIM_JI_YONG_TOPIC.id}`}><strong>{KIM_JI_YONG_TOPIC.title}</strong><span>{kimJiYongEntries.length}개 항목 · 반대 인사들의 과거 행적과 대통령 입장, 후보자 검증까지</span></Link>
+          <p className={styles.note}>{KIM_JI_YONG_TOPIC.description}</p>
         </li></ul>
       </section>
       {parents.length ? <ul className={styles.topicList}>{parents.map((topic) => <li key={topic.id}>
