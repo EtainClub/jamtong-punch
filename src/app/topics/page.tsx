@@ -4,6 +4,7 @@ import { KIM_BU_SEON_TOPIC, timelineEntries } from "@/content/kim-bu-seon-timeli
 import { DAEJANGDONG_TOPIC, timelineEntries as daejangdongEntries } from "@/content/daejangdong-timeline";
 import { FAMILY_PROFANITY_TOPIC, timelineEntries as familyProfanityEntries } from "@/content/family-profanity-timeline";
 import { KIM_JI_YONG_TOPIC, timelineEntries as kimJiYongEntries } from "@/content/kim-ji-yong-timeline";
+import { PROSECUTION_REFORM_TOPIC, timelineEntries as prosecutionReformEntries } from "@/content/prosecution-reform-timeline";
 import { Empty, SiteHeader } from "@/features/archive/components";
 import styles from "@/features/archive/archive.module.css";
 import { listTopics } from "@/lib/archive/read";
@@ -33,6 +34,9 @@ export default async function TopicsPage() {
         </li><li>
           <Link href={`/topics/${KIM_JI_YONG_TOPIC.id}`}><strong>{KIM_JI_YONG_TOPIC.title}</strong><span>{kimJiYongEntries.length}개 항목 · 반대 인사들의 과거 행적과 대통령 입장, 후보자 검증까지</span></Link>
           <p className={styles.note}>{KIM_JI_YONG_TOPIC.description}</p>
+        </li><li>
+          <Link href={`/topics/${PROSECUTION_REFORM_TOPIC.id}`}><strong>{PROSECUTION_REFORM_TOPIC.title}</strong><span>{prosecutionReformEntries.length}개 항목 · 2017년 저서·대선 공약부터 기관 출범·운영 쟁점까지</span></Link>
+          <p className={styles.note}>{PROSECUTION_REFORM_TOPIC.description}</p>
         </li></ul>
       </section>
       {parents.length ? <ul className={styles.topicList}>{parents.map((topic) => <li key={topic.id}>
