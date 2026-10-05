@@ -1,0 +1,63 @@
+.back { display: inline-block; margin-bottom: 18px; color: var(--graphite); font-size: 14px; }
+.meta { color: var(--smoke); font-size: 13px; line-height: 1.7; }
+.overview { display: grid; gap: 12px; margin-top: 30px; }
+.overview h2, .analysis h2, .timelineSection h2, .method h2 { margin: 0 0 12px; font-size: 23px; letter-spacing: -.04em; }
+.overview article { border: 1px solid var(--stone); border-radius: 16px; padding: 18px; background: white; }
+.overview h3 { margin: 0; font-size: 17px; }
+.overview p, .analysis p, .video p, .timelineSection > p, .method p { font-size: 15px; line-height: 1.8; }
+.analysis { margin-top: 36px; padding: 22px; border-radius: 18px; background: var(--taupe); }
+.analysis h3 { margin: 24px 0 8px; font-size: 17px; }
+.references { display: flex; flex-wrap: wrap; gap: 6px 14px; list-style: none; padding: 0; margin: 12px 0 0; font-size: 13px; }
+.references a { display: inline-block; padding: 5px 0; color: var(--navy); text-underline-offset: 3px; }
+.video { margin-top: 28px; padding: 20px; border: 1px solid var(--stone); border-left: 4px solid var(--navy); border-radius: 14px; }
+.video h2 { margin: 0; font-size: 18px; line-height: 1.5; }
+.video > a { font-size: 14px; }
+.timelineSection { margin-top: 42px; }
+.filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 18px 0; }
+.filters label { display: grid; gap: 6px; flex: 1; min-width: 140px; font-size: 13px; font-weight: 650; }
+.filters select { width: 100%; border: 1px solid var(--stone); border-radius: 10px; background: white; padding: 12px 10px; color: var(--ink); font: inherit; }
+.filters button { min-height: 44px; border: 0; border-radius: 10px; background: var(--ink); padding: 10px 18px; color: white; font: inherit; cursor: pointer; }
+.periodNav { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 28px; }
+.periodNav a { border: 1px solid var(--stone); border-radius: 999px; padding: 10px 14px; font-size: 13px; text-decoration: none; }
+.period { margin: 30px 0; }
+.periodHead > span { font-size: 13px; color: var(--navy); font-weight: 700; }
+.periodHead h3 { margin: 6px 0; font-size: 22px; letter-spacing: -.04em; scroll-margin-top: 100px; }
+.periodHead p { margin: 6px 0 20px; color: var(--smoke); font-size: 14px; line-height: 1.7; }
+.timeline { list-style: none; margin: 0 0 0 5px; padding: 0 0 0 18px; border-left: 2px solid var(--stone); }
+.timeline > li { position: relative; margin-bottom: 16px; scroll-margin-top: 100px; }
+.timeline > li::before { content: ""; position: absolute; top: 24px; left: -24px; width: 10px; height: 10px; border-radius: 50%; background: var(--navy); }
+.entry { border: 1px solid var(--stone); border-radius: 16px; padding: 18px; background: white; overflow-wrap: anywhere; }
+.entryMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--smoke); font-size: 12px; line-height: 1.6; }
+.badge { padding: 3px 8px; border-radius: 8px; background: var(--taupe); color: var(--graphite); font-weight: 650; }
+.entry h4 { margin: 12px 0 8px; font-size: 18px; letter-spacing: -.03em; line-height: 1.5; }
+.entry h4 a { color: inherit; text-decoration: none; }
+.entry h4 a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.entry p { font-size: 15px; line-height: 1.8; margin: 8px 0; }
+.entry .limit, .video .limit { padding: 10px 12px; border-radius: 10px; background: var(--eggshell); color: var(--graphite); font-size: 13px; }
+.limit strong { display: block; margin-bottom: 3px; }
+.method { margin-top: 36px; border-top: 1px solid var(--stone); padding-top: 24px; }
+.method summary { cursor: pointer; padding: 12px 0; font-size: 15px; font-weight: 650; }
+.sourceList { padding-left: 22px; }
+.sourceList li { margin: 16px 0; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.sourceList p { margin: 4px 0; color: var(--smoke); font-size: 12px; }
+.timelineSection > h2 { scroll-margin-top: 100px; }
+.voicesSection { margin-top: 36px; }
+.voicesSection h2 { margin: 0 0 12px; font-size: 23px; letter-spacing: -.04em; }
+.voicesSection > p, .voice p { font-size: 15px; line-height: 1.8; }
+.voicesGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 12px; margin-top: 18px; }
+.voice { min-width: 0; padding: 18px; border: 1px solid var(--stone); border-radius: 16px; background: white; overflow-wrap: anywhere; }
+.voice summary { cursor: pointer; }
+.voice summary::marker { color: var(--navy); }
+.voiceHeading { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 7px; }
+.voiceHeading strong { font-size: 18px; }
+.voice summary > .meta { display: block; }
+.voice .limit { padding: 10px 12px; border-radius: 10px; background: var(--eggshell); color: var(--graphite); font-size: 13px; }
+.voice summary:focus-visible { outline: 2px solid var(--navy); outline-offset: 5px; border-radius: 4px; }
+@media (max-width: 700px) { .voicesGrid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) {
+  .analysis { padding: 18px; }
+  .entry { padding: 14px; }
+  .entry h4 { font-size: 17px; }
+  .filters label { min-width: 115px; }
+  .filters button { width: 100%; }
+}

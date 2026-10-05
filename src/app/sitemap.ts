@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { KIM_BU_SEON_TOPIC } from "@/content/kim-bu-seon-timeline";
+import { DAEJANGDONG_TOPIC } from "@/content/daejangdong-timeline";
 import { publishedIndex } from "@/lib/archive/read";
 import { SITE_URL } from "@/lib/site";
 
@@ -13,6 +15,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/"),
     entry("/people"),
     entry("/topics"),
+    entry(`/topics/${KIM_BU_SEON_TOPIC.id}`, KIM_BU_SEON_TOPIC.reviewedAt),
+    entry(`/topics/${DAEJANGDONG_TOPIC.id}`, DAEJANGDONG_TOPIC.reviewedAt),
     entry("/about"),
     entry("/guide"),
     ...index.people.map((item) => entry(`/people/${item.id}`, item.updatedAt)),
