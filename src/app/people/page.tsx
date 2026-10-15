@@ -4,24 +4,25 @@ import { Avatar, currentRole, Empty, SiteHeader } from "@/features/archive/compo
 import styles from "@/features/archive/archive.module.css";
 import { listPeople, type PersonCounts } from "@/lib/archive/read";
 import { CheerGauge } from "@/features/archive/CheerGauge";
+import { PeopleSearch } from "@/features/archive/PeopleSearch";
 import { getPublicStatsIndex, getRatioFlags, ratioHidden } from "@/lib/stats/read";
 import { MIN_PARTICIPANTS, present } from "@/lib/stats/present";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "인물" };
 
-// Most connected first by default; ties fall back to the other counts, then the name.
-const SORTS = [["relations", "관계 많은 순"], ["statements", "기록 많은 순"], ["evaluations", "평가 많은 순"], ["cheer", "응원율 높은 순"]] as const;
+// Highest cheer rate first by default; count sorts retain their existing tie breakers.
+const SORTS = [["cheer", "응원율 높은 순"], ["newest", "최신순"], ["relations", "관계 많은 순"], ["statements", "기록 많은 순"], ["evaluations", "평가 많은 순"]] as const;
 type Sort = (typeof SORTS)[number][0];
-type CountSort = Exclude<Sort, "cheer">;
+type CountSort = Exclude<Sort, "cheer" | "newest">;
 const KEY: Record<CountSort, keyof PersonCounts> = { relations: "relations", statements: "statements", evaluations: "evaluationsReceived" };
 const TIES: Record<CountSort, CountSort[]> = { relations: ["statements", "evaluations"], statements: ["relations", "evaluations"], evaluations: ["relations", "statements"] };
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function PeoplePage({ searchParams }: Props) {
   const query = await searchParams;
-  const sort: Sort = SORTS.some(([key]) => key === query.sort) ? query.sort as Sort : "relations";
-  const countSort = sort === "cheer" ? "relations" : sort;
+  const sort: Sort = SORTS.some(([key]) => key === query.sort) ? query.sort as Sort : "cheer";
+  const countSort = sort === "cheer" || sort === "newest" ? "relations" : sort;
   const order = [countSort, ...TIES[countSort]].map((key) => KEY[key]);
   const [registeredPeople, statsIndex, flags] = await Promise.all([listPeople(), getPublicStatsIndex(), getRatioFlags()]);
   const figures = new Map(registeredPeople.map((person) => {
@@ -31,6 +32,9 @@ export default async function PeoplePage({ searchParams }: Props) {
     return [person.id, { hidden, figure, rate: hidden || figure.ratio === null ? null : 100 - figure.ratio }] as const;
   }));
   const people = [...registeredPeople].sort((left, right) => {
+    if (sort === "newest") {
+      return (right.createdAt ?? "").localeCompare(left.createdAt ?? "") || left.name.localeCompare(right.name, "ko");
+    }
     if (sort === "cheer") {
       const leftRate = figures.get(left.id)!.rate;
       const rightRate = figures.get(right.id)!.rate;
@@ -44,8 +48,11 @@ export default async function PeoplePage({ searchParams }: Props) {
     <SiteHeader current="people" />
     <main className={styles.wideShell}>
       <section className={styles.hero}><h1>인물</h1><p>공개된 인물 {registeredPeople.length}명. 각 인물의 언행, 그 인물에 대한 다른 사람들의 평가, 발언으로 이어진 관계를 봅니다.</p><p>응원율은 최근 30일 응원 ÷ (응원 + 펀치)이며, 참여 {MIN_PARTICIPANTS}명부터 표시합니다. 임통 참여자의 기록이며 여론조사가 아닙니다.</p></section>
+      <div className={styles.peopleSearch}>
+        <PeopleSearch people={registeredPeople.map((person) => ({ id: person.id, name: person.name, aliases: person.aliases, role: currentRole(person) }))} />
+      </div>
       <ul className={styles.sortChips} aria-label="정렬">{SORTS.map(([key, label]) => <li key={key}>
-        <Link className={styles.chip} href={key === "relations" ? "/people" : `/people?sort=${key}`} aria-current={sort === key}>{label}</Link>
+        <Link className={styles.chip} href={key === "cheer" ? "/people" : `/people?sort=${key}`} aria-current={sort === key}>{label}</Link>
       </li>)}</ul>
       {people.length ? <ul className={styles.peopleGrid}>{people.map((person) => {
         const { hidden, figure, rate } = figures.get(person.id)!;

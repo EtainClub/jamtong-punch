@@ -28,8 +28,11 @@
 .search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--stone); border-radius: var(--radius-pill); background: var(--taupe); padding: 0 16px; }
 .search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; padding: 13px 0; color: var(--ink); font-size: 16px; }
 .searchResults { display: grid; gap: 4px; margin: 10px 0 0; padding: 0; list-style: none; }
-.searchResults a { display: flex; align-items: center; gap: 10px; border-radius: 12px; padding: 8px; color: var(--ink); text-decoration: none; }
+.searchResults a { display: flex; align-items: baseline; gap: 12px; border-radius: 12px; padding: 8px; color: var(--ink); text-decoration: none; }
+.searchResults strong { flex: 0 0 auto; white-space: nowrap; }
+.searchResults a > span { min-width: 0; overflow-wrap: anywhere; }
 .searchResults a:hover { background: var(--taupe); }
+.peopleSearch { max-width: 640px; margin-bottom: 24px; }
 
 .avatar, .avatarFallback { flex: 0 0 auto; border-radius: 50%; object-fit: cover; }
 .avatar { background: var(--stone); }

@@ -15,7 +15,7 @@ export const CONTENT_TAG = "content";
 const CACHE = { tags: [CONTENT_TAG], revalidate: 60 };
 
 export type PersonCounts = { statements: number; evaluationsReceived: number; evaluationsGiven: number; relations: number };
-export type PersonView = Person & { counts: PersonCounts };
+export type PersonView = Person & { counts: PersonCounts; createdAt?: string | null };
 // Nickname of the Google user who submitted the record, if not an operator.
 export type Credited = { contributor?: string | null };
 export type StatementView = Statement & Credited & { mentionedPersonIds: string[] };
@@ -27,7 +27,11 @@ export type SourceView = Source & { availability: SourceAvailability | null };
 const ZERO_PERSON_COUNTS: PersonCounts = { statements: 0, evaluationsReceived: 0, evaluationsGiven: 0, relations: 0 };
 
 type Snapshot = FirebaseFirestore.DocumentSnapshot;
-const person = (snapshot: Snapshot): PersonView => ({ ...authored("people", snapshot.data()!), counts: snapshot.get("counts") ?? ZERO_PERSON_COUNTS });
+const person = (snapshot: Snapshot): PersonView => ({
+  ...authored("people", snapshot.data()!),
+  counts: snapshot.get("counts") ?? ZERO_PERSON_COUNTS,
+  createdAt: (snapshot.get("createdAt") as FirebaseFirestore.Timestamp | undefined)?.toDate().toISOString() ?? null,
+});
 const credit = (snapshot: Snapshot): string | null => snapshot.get("contributor.nickname") ?? null;
 const statement = (snapshot: Snapshot): StatementView => ({ ...authored("statements", snapshot.data()!), mentionedPersonIds: snapshot.get("mentionedPersonIds") ?? [], contributor: credit(snapshot) });
 const evaluation = (snapshot: Snapshot): EvaluationView => ({ ...authored("evaluations", snapshot.data()!), contributor: credit(snapshot) });
