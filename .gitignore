@@ -6,3 +6,5 @@ firestore-debug.log
 .env.*
 !.env.example
 *.tsbuildinfo
+.DS_Store
+firebase-debug.log
